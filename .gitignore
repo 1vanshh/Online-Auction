@@ -1,0 +1,52 @@
+# =====================
+# IDE
+# =====================
+.idea/
+*.iml
+.vscode/
+
+# =====================
+# OS
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Logs
+# =====================
+logs/
+*.log
+
+# =====================
+# Environment
+# =====================
+.env
+.env.local
+
+# =====================
+# Java / Maven
+# =====================
+target/
+build/
+
+# Maven wrapper (оставляем!)
+!.mvn/wrapper/maven-wrapper.jar
+
+# =====================
+# Node / Frontend
+# =====================
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# =====================
+# Docker
+# =====================
+docker-data/
+*.pid
+
+# =====================
+# Coverage / test
+# =====================
+coverage/
