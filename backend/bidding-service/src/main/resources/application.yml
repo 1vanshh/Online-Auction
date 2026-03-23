@@ -2,13 +2,16 @@ server:
   port: ${BIDDING_SERVICE_PORT:8083}
 
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../../.env[.properties]
+
   application:
     name: bidding-service
 
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:online_auction}
     username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:1234}
+    password: ${POSTGRES_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
