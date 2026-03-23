@@ -1,13 +1,13 @@
-package org.example.auctionservice;
+package com.example.biddingservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class AuctionServiceApplication {
+public class BiddingServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(AuctionServiceApplication.class, args);
+        SpringApplication.run(BiddingServiceApplication.class, args);
     }
 
 }

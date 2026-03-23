@@ -80,6 +80,7 @@ VALUES
 INSERT INTO auction.categories (name, description)
 VALUES
     ('Electronics', 'Phones, laptops, gadgets'),
+    ('Vehicles', 'Cars and other transport'),
     ('Books', 'Books and printed materials'),
     ('Clothing', 'Clothes and accessories'),
     ('Home', 'Home goods'),
