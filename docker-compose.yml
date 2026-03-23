@@ -20,5 +20,92 @@ services:
       timeout: 5s
       retries: 10
 
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: auth-service/Dockerfile
+    container_name: online-auction-auth-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8081
+      SPRING_APPLICATION_NAME: auth-service
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: auth
+
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_DEFAULT_SCHEMA: auth
+      SPRING_FLYWAY_SCHEMAS: auth
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+
+      LOGGING_LEVEL_ROOT: INFO
+    ports:
+      - "8081:8081"
+
+  auction-service:
+    build:
+      context: ./backend
+      dockerfile: auction-service/Dockerfile
+    container_name: online-auction-auction-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8082
+      SPRING_APPLICATION_NAME: auction-service
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: auction
+
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_DEFAULT_SCHEMA: auction
+      SPRING_FLYWAY_SCHEMAS: auction
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+
+      LOGGING_LEVEL_ROOT: INFO
+    ports:
+      - "8082:8082"
+
+  bidding-service:
+    build:
+      context: ./backend
+      dockerfile: bidding-service/Dockerfile
+    container_name: online-auction-bidding-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8083
+      SPRING_APPLICATION_NAME: bidding-service
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA: bidding
+
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_DEFAULT_SCHEMA: bidding
+      SPRING_FLYWAY_SCHEMAS: bidding
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+
+      LOGGING_LEVEL_ROOT: INFO
+    ports:
+      - "8083:8083"
+
 volumes:
   postgres_data:
