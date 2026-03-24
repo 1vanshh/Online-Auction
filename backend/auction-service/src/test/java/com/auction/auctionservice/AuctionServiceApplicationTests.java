@@ -1,4 +1,4 @@
-package com.example.authservice;
+package com.auction.auctionservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
                 "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration," +
                 "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
 })
-class AuthServiceApplicationTests {
+class AuctionServiceApplicationTests {
 
     @Test
     void contextLoads() {

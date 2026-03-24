@@ -1,8 +1,3 @@
-CREATE TABLE auth.roles (
-                                          id BIGSERIAL PRIMARY KEY,
-                                          name VARCHAR(50) NOT NULL UNIQUE
-    );
-
 CREATE TABLE auth.users (
                                           id BIGSERIAL PRIMARY KEY,
                                           first_name VARCHAR(100) NOT NULL,
@@ -15,20 +10,11 @@ CREATE TABLE auth.users (
     city VARCHAR(100),
     address_line VARCHAR(255),
     postal_code VARCHAR(20),
+    role VARCHAR(50) NOT NULL DEFAULT 'USER',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_banned BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-CREATE TABLE auth.user_roles (
-                                               user_id BIGINT NOT NULL,
-                                               role_id BIGINT NOT NULL,
-                                               PRIMARY KEY (user_id, role_id),
-    CONSTRAINT fk_user_roles_user
-    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_user_roles_role
-    FOREIGN KEY (role_id) REFERENCES auth.roles(id) ON DELETE CASCADE
     );
 
 CREATE TABLE auth.user_bans (
@@ -71,7 +57,3 @@ CREATE TABLE auth.audit_log (
 
 CREATE INDEX idx_audit_log_user_id ON auth.audit_log(user_id);
 CREATE INDEX idx_audit_log_created_at ON auth.audit_log(created_at);
-
-INSERT INTO auth.roles (name)
-VALUES ('USER'), ('ADMIN')
-    ON CONFLICT (name) DO NOTHING;

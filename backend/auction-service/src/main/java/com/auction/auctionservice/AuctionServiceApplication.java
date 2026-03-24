@@ -1,4 +1,4 @@
-package com.example.auctionservice;
+package com.auction.auctionservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
