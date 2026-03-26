@@ -21,15 +21,19 @@ public class JwtTokenProvider {
     private long validityInMilliseconds;
 
     public String generateToken(User user) {
+        return generateAccessToken(user);
+    }
+
+    public String generateAccessToken(User user) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
-                .setSubject(user.getEmail())
+                .subject(user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("userId", user.getId())
-                .setIssuedAt(now)
-                .setExpiration(validity)
+                .issuedAt(now)
+                .expiration(validity)
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -54,6 +58,11 @@ public class JwtTokenProvider {
         return null;
     }
 
+    public boolean isTokenValid(String token) {
+        getClaims(token);
+        return true;
+    }
+
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -63,6 +72,10 @@ public class JwtTokenProvider {
     }
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+        byte[] secretBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes long");
+        }
+        return Keys.hmacShaKeyFor(secretBytes);
     }
 }

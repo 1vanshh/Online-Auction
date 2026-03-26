@@ -1,15 +1,15 @@
 server:
-  port: ${AUTH_SERVICE_PORT:8081}
+  port: ${BIDDING_SERVICE_PORT:8083}
 
 spring:
   config:
     import: optional:file:.env[.properties],optional:file:../../.env[.properties]
 
   application:
-    name: auth-service
+    name: bidding-service
 
   datasource:
-    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:online_auction}
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:online_auction}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
@@ -19,16 +19,14 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: auth
+        default_schema: bidding
         format_sql: true
     open-in-view: false
 
   flyway:
     enabled: true
-    baseline-on-migrate: true
-    baseline-version: 1
-    default-schema: auth
-    schemas: auth
+    default-schema: bidding
+    schemas: bidding
     locations: classpath:db/migration
 
 logging:
@@ -38,6 +36,16 @@ logging:
     org.hibernate.SQL: INFO
     org.flywaydb: INFO
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
 jwt:
-  secret: ${JWT_SECRET:change-me-please-change-me-please-1}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION_MS:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION_MS:2592000000}

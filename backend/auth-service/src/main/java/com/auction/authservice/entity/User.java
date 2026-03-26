@@ -23,12 +23,13 @@ public class User {
     private Long id;
 
     @NotBlank(message = "First name is required")
-    @Size(max = 100)
+    @Size(min = 2, max = 100)
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
-    @Size(max = 100)
-    @Column(name = "last_name", length = 100)
+    @NotBlank(message = "Last name is required")
+    @Size(min = 2, max = 100)
+    @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
     @NotBlank(message = "Email is required")

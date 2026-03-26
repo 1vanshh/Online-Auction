@@ -1,5 +1,8 @@
 package com.auction.authservice;
 
+import com.auction.authservice.repository.AuditLogRepository;
+import com.auction.authservice.repository.RefreshTokenRepository;
+import com.auction.authservice.repository.UserBanRepository;
 import com.auction.authservice.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +18,15 @@ class AuthServiceApplicationTests {
 
     @MockBean
     private UserRepository userRepository;
+
+    @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @MockBean
+    private UserBanRepository userBanRepository;
+
+    @MockBean
+    private AuditLogRepository auditLogRepository;
 
     @Test
     void contextLoads() {

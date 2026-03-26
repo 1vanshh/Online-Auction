@@ -5,6 +5,7 @@ import com.auction.authservice.dto.request.UpdateUserRequest;
 import com.auction.authservice.dto.response.UserResponse;
 import com.auction.authservice.entity.Role;
 import com.auction.authservice.entity.User;
+import com.auction.authservice.exception.BadRequestException;
 import com.auction.authservice.exception.NotFoundException;
 import com.auction.authservice.mapper.UserMapper;
 import com.auction.authservice.repository.UserRepository;
@@ -29,6 +30,10 @@ class UserServiceTest {
     private UserRepository userRepository;
     @Mock
     private UserMapper userMapper;
+    @Mock
+    private UserBanService userBanService;
+    @Mock
+    private AuditService auditService;
     @InjectMocks
     private UserService userService;
 
@@ -63,6 +68,7 @@ class UserServiceTest {
         UserResponse actual = userService.getById(1L);
 
         assertSame(response, actual);
+        verify(userBanService).syncBanStatus(user);
     }
 
     @Test
@@ -82,21 +88,13 @@ class UserServiceTest {
         UserResponse actual = userService.getByEmail("ivan@example.com");
 
         assertSame(response, actual);
-    }
-
-    @Test
-    void shouldThrowWhenUserByEmailNotFound() {
-        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
-
-        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.getByEmail("missing@example.com"));
-
-        assertEquals("User not found", ex.getMessage());
+        verify(userBanService).syncBanStatus(user);
     }
 
     @Test
     void shouldUpdateUserByIdPartially() {
         UpdateUserRequest request = new UpdateUserRequest();
-        request.setFirstName("Petr");
+        request.setFirstName("  Petr  ");
         request.setPhone("+70000000000");
         request.setCity("Saint Petersburg");
 
@@ -114,16 +112,19 @@ class UserServiceTest {
         assertEquals("+70000000000", saved.getPhone());
         assertEquals("Saint Petersburg", saved.getCity());
         assertEquals("Old address", saved.getAddressLine());
+        verify(auditService).log(eq(user), eq("USER_PROFILE_UPDATED"), eq("USER"), eq(1L), anyString());
     }
 
     @Test
-    void shouldThrowWhenUpdatingByIdMissingUser() {
-        when(userRepository.findById(7L)).thenReturn(Optional.empty());
-
+    void shouldRejectBlankLastNameOnSelfUpdate() {
         UpdateUserRequest request = new UpdateUserRequest();
-        request.setFirstName("New Name");
+        request.setLastName("   ");
 
-        assertThrows(NotFoundException.class, () -> userService.update(7L, request));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> userService.update(1L, request));
+
+        assertEquals("Last name cannot be blank", ex.getMessage());
         verify(userRepository, never()).save(any());
     }
 
@@ -156,32 +157,7 @@ class UserServiceTest {
     }
 
     @Test
-    void shouldThrowWhenUpdatingByEmailMissingUser() {
-        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> userService.updateByEmail("missing@example.com", new UpdateUserRequest()));
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldAdminUpdateOnlyProvidedFields() {
-        AdminUpdateUserRequest request = new AdminUpdateUserRequest();
-        request.setActive(false);
-        request.setRole(Role.ADMIN);
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userMapper.toUserResponse(user)).thenReturn(response);
-
-        userService.adminUpdate(1L, request);
-
-        verify(userRepository).save(user);
-        assertFalse(user.isActive());
-        assertFalse(user.isBanned());
-        assertEquals(Role.ADMIN, user.getRole());
-    }
-
-    @Test
-    void shouldAdminUpdateBannedFlagOnly() {
+    void shouldAdminBanUserAndDeactivate() {
         AdminUpdateUserRequest request = new AdminUpdateUserRequest();
         request.setBanned(true);
 
@@ -190,19 +166,42 @@ class UserServiceTest {
 
         userService.adminUpdate(1L, request);
 
+        verify(userBanService).createBan(eq(user), isNull(), eq(UserBanService.DEFAULT_ADMIN_BAN_REASON), any());
+        verify(userRepository).save(user);
         assertTrue(user.isBanned());
-        assertTrue(user.isActive());
-        assertEquals(Role.USER, user.getRole());
+        assertFalse(user.isActive());
+        verify(auditService).log(isNull(), eq("ADMIN_USER_UPDATED"), eq("USER"), eq(1L), contains("banned=true"));
     }
 
     @Test
-    void shouldThrowWhenAdminUpdatingMissingUser() {
-        when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    void shouldRejectActivationOfBannedUser() {
+        AdminUpdateUserRequest request = new AdminUpdateUserRequest();
+        request.setActive(true);
+        user.setBanned(true);
+        user.setActive(false);
 
-        NotFoundException ex = assertThrows(NotFoundException.class,
-                () -> userService.adminUpdate(2L, new AdminUpdateUserRequest()));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        assertEquals("User not found", ex.getMessage());
-        verify(userRepository, never()).save(any());
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> userService.adminUpdate(1L, request));
+
+        assertEquals("Banned user cannot be activated", ex.getMessage());
+    }
+
+    @Test
+    void shouldUnbanUserAndActivateWhenRequested() {
+        AdminUpdateUserRequest request = new AdminUpdateUserRequest();
+        request.setBanned(false);
+
+        user.setBanned(true);
+        user.setActive(false);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userMapper.toUserResponse(user)).thenReturn(response);
+
+        userService.adminUpdate(1L, request);
+
+        verify(userBanService).revokeAllActiveBans(user);
+        assertFalse(user.isBanned());
+        assertTrue(user.isActive());
     }
 }

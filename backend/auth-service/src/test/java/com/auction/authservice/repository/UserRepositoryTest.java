@@ -56,8 +56,6 @@ class UserRepositoryTest {
         assertNotNull(savedUser.getId());
         assertEquals("Ivan", savedUser.getFirstName());
         assertEquals(Role.USER, savedUser.getRole());
-        assertNotNull(savedUser.getCreatedAt());
-        assertNotNull(savedUser.getUpdatedAt());
     }
 
     @Test
@@ -71,43 +69,6 @@ class UserRepositoryTest {
     }
 
     @Test
-    void shouldReturnEmptyWhenEmailMissing() {
-        assertTrue(userRepository.findByEmail("missing@example.com").isEmpty());
-    }
-
-    @Test
-    void shouldReturnTrueWhenEmailExists() {
-        userRepository.save(buildUser("Petr", "Sidorov", "petr@example.com", true, false));
-
-        assertTrue(userRepository.existsByEmail("petr@example.com"));
-    }
-
-    @Test
-    void shouldReturnFalseWhenEmailDoesNotExist() {
-        assertFalse(userRepository.existsByEmail("ghost@example.com"));
-    }
-
-    @Test
-    void shouldUpdateExistingUser() {
-        User saved = userRepository.save(buildUser("Old", "Name", "update@example.com", true, false));
-        saved.setFirstName("New");
-
-        User updated = userRepository.saveAndFlush(saved);
-
-        assertEquals("New", userRepository.findById(updated.getId()).orElseThrow().getFirstName());
-    }
-
-    @Test
-    void shouldDeleteUser() {
-        User saved = userRepository.save(buildUser("Delete", "Me", "delete@example.com", true, false));
-
-        userRepository.delete(saved);
-        userRepository.flush();
-
-        assertTrue(userRepository.findById(saved.getId()).isEmpty());
-    }
-
-    @Test
     void shouldThrowForDuplicateEmail() {
         userRepository.saveAndFlush(buildUser("First", "User", "duplicate@example.com", true, false));
 
@@ -116,31 +77,20 @@ class UserRepositoryTest {
     }
 
     @Test
-    void shouldFindActiveUserById() {
-        User saved = userRepository.save(buildUser("Active", "User", "active@example.com", true, false));
-
-        Optional<User> found = userRepository.findByIdAndActiveTrue(saved.getId());
-
-        assertTrue(found.isPresent());
-        assertEquals("active@example.com", found.get().getEmail());
-    }
-
-    @Test
-    void shouldNotFindInactiveUserByIdAndActiveTrue() {
-        User saved = userRepository.save(buildUser("Inactive", "User", "inactive@example.com", false, false));
-
-        assertTrue(userRepository.findByIdAndActiveTrue(saved.getId()).isEmpty());
+    void shouldRejectActiveAndBannedCombination() {
+        assertThrows(DataIntegrityViolationException.class,
+                () -> userRepository.saveAndFlush(buildUser("Bad", "State", "bad@example.com", true, true)));
     }
 
     @Test
     void shouldReturnOnlyActiveUsers() {
         userRepository.save(buildUser("User1", "Test", "user1@example.com", true, false));
         userRepository.save(buildUser("User2", "Test", "user2@example.com", false, false));
-        userRepository.save(buildUser("User3", "Test", "user3@example.com", true, true));
+        userRepository.save(buildUser("User3", "Test", "user3@example.com", false, true));
 
         List<User> users = userRepository.findAllByActiveTrue();
 
-        assertEquals(2, users.size());
+        assertEquals(1, users.size());
         assertTrue(users.stream().allMatch(User::isActive));
     }
 

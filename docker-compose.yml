@@ -13,12 +13,12 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   auth-service:
     build:
@@ -30,7 +30,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SERVER_PORT: 8081
+      SERVER_PORT: ${AUTH_SERVICE_PORT}
       SPRING_APPLICATION_NAME: auth-service
 
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -45,9 +45,22 @@ services:
       SPRING_FLYWAY_SCHEMAS: auth
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS}
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+
       LOGGING_LEVEL_ROOT: INFO
     ports:
-      - "8081:8081"
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${AUTH_SERVICE_PORT}/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   auction-service:
     build:
@@ -59,7 +72,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SERVER_PORT: 8082
+      SERVER_PORT: ${AUCTION_SERVICE_PORT}
       SPRING_APPLICATION_NAME: auction-service
 
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -74,9 +87,18 @@ services:
       SPRING_FLYWAY_SCHEMAS: auction
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+
       LOGGING_LEVEL_ROOT: INFO
     ports:
-      - "8082:8082"
+      - "${AUCTION_SERVICE_PORT}:${AUCTION_SERVICE_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${AUCTION_SERVICE_PORT}/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   bidding-service:
     build:
@@ -88,7 +110,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SERVER_PORT: 8083
+      SERVER_PORT: ${BIDDING_SERVICE_PORT}
       SPRING_APPLICATION_NAME: bidding-service
 
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -103,9 +125,18 @@ services:
       SPRING_FLYWAY_SCHEMAS: bidding
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+
       LOGGING_LEVEL_ROOT: INFO
     ports:
-      - "8083:8083"
+      - "${BIDDING_SERVICE_PORT}:${BIDDING_SERVICE_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${BIDDING_SERVICE_PORT}/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 volumes:
   postgres_data:

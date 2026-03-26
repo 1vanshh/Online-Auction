@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper {
 
-    // Converting User to UserResponse
     public UserResponse toUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -29,13 +28,12 @@ public class UserMapper {
                 .build();
     }
 
-    // Converting RegisterRequest to User (for registration)
     public User toUser(RegisterRequest registerRequest) {
         User user = new User();
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
         user.setEmail(registerRequest.getEmail());
-        user.setPasswordHash(registerRequest.getPassword());  // TODO: Пароль ещё не зашифрован, это будет позже
+        user.setPasswordHash(registerRequest.getPassword());
         user.setPhone(registerRequest.getPhone());
         return user;
     }

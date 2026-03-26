@@ -13,7 +13,8 @@ public class RegisterRequest {
     @Size(min = 2, max = 100)
     private String firstName;
 
-    @Size(max = 100)
+    @NotBlank
+    @Size(min = 2, max = 100)
     private String lastName;
 
     @NotBlank
