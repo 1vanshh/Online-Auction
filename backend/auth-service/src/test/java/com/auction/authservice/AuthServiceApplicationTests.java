@@ -1,7 +1,7 @@
 package com.auction.authservice;
 
-import org.junit.jupiter.api.Test;
 import com.auction.authservice.repository.UserRepository;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 

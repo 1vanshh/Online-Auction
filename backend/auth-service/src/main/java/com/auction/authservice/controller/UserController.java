@@ -6,7 +6,6 @@ import com.auction.authservice.dto.response.UserResponse;
 import com.auction.authservice.exception.UnauthorizedException;
 import com.auction.authservice.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -31,15 +30,14 @@ public class UserController {
         return userService.updateByEmail(getCurrentEmail(), request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/{id}")
-    public UserResponse getUserById(@PathVariable Long id) {
+    public UserResponse getUserById(@PathVariable("id") Long id) {
         return userService.getById(id);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/admin/{id}")
-    public UserResponse adminUpdateUser(@PathVariable Long id, @RequestBody AdminUpdateUserRequest request) {
+    public UserResponse adminUpdateUser(@PathVariable("id") Long id,
+                                        @RequestBody AdminUpdateUserRequest request) {
         return userService.adminUpdate(id, request);
     }
 

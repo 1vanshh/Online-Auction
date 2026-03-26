@@ -1,5 +1,6 @@
 package com.auction.authservice.repository;
 
+import com.auction.authservice.entity.Role;
 import com.auction.authservice.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,10 +37,8 @@ class UserRepositoryTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.jpa.properties.hibernate.default_schema", () -> "auth");
-
         registry.add("spring.flyway.enabled", () -> true);
         registry.add("spring.flyway.schemas", () -> "auth");
         registry.add("spring.flyway.default-schema", () -> "auth");
@@ -52,124 +51,100 @@ class UserRepositoryTest {
     @Test
     @DisplayName("Should save user and generate id")
     void shouldSaveUserAndGenerateId() {
-        User user = buildUser("Ivan", "Ivanov", "ivan@example.com");
-
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.save(buildUser("Ivan", "Ivanov", "ivan@example.com", true, false));
 
         assertNotNull(savedUser.getId());
         assertEquals("Ivan", savedUser.getFirstName());
-        assertEquals("ivan@example.com", savedUser.getEmail());
+        assertEquals(Role.USER, savedUser.getRole());
         assertNotNull(savedUser.getCreatedAt());
         assertNotNull(savedUser.getUpdatedAt());
     }
 
     @Test
-    @DisplayName("Should find user by id")
-    void shouldFindUserById() {
-        User savedUser = userRepository.save(buildUser("Anna", "Petrova", "anna@example.com"));
+    void shouldFindByEmail() {
+        userRepository.save(buildUser("Anna", "Petrova", "anna@example.com", true, false));
 
-        Optional<User> foundUser = userRepository.findById(savedUser.getId());
+        Optional<User> found = userRepository.findByEmail("anna@example.com");
 
-        assertTrue(foundUser.isPresent());
-        assertEquals(savedUser.getId(), foundUser.get().getId());
-        assertEquals("anna@example.com", foundUser.get().getEmail());
+        assertTrue(found.isPresent());
+        assertEquals("Anna", found.get().getFirstName());
     }
 
     @Test
-    @DisplayName("Should return empty optional when user not found by id")
-    void shouldReturnEmptyWhenUserNotFoundById() {
-        Optional<User> foundUser = userRepository.findById(999999L);
-
-        assertTrue(foundUser.isEmpty());
+    void shouldReturnEmptyWhenEmailMissing() {
+        assertTrue(userRepository.findByEmail("missing@example.com").isEmpty());
     }
 
     @Test
-    @DisplayName("Should find user by email")
-    void shouldFindUserByEmail() {
-        userRepository.save(buildUser("Petr", "Sidorov", "petr@example.com"));
-
-        Optional<User> foundUser = userRepository.findByEmail("petr@example.com");
-
-        assertTrue(foundUser.isPresent());
-        assertEquals("Petr", foundUser.get().getFirstName());
-        assertEquals("petr@example.com", foundUser.get().getEmail());
-    }
-
-    @Test
-    @DisplayName("Should return empty optional when user not found by email")
-    void shouldReturnEmptyWhenUserNotFoundByEmail() {
-        Optional<User> foundUser = userRepository.findByEmail("missing@example.com");
-
-        assertTrue(foundUser.isEmpty());
-    }
-
-    @Test
-    @DisplayName("Should return true when email exists")
     void shouldReturnTrueWhenEmailExists() {
-        userRepository.save(buildUser("Maria", "Smirnova", "maria@example.com"));
+        userRepository.save(buildUser("Petr", "Sidorov", "petr@example.com", true, false));
 
-        boolean exists = userRepository.existsByEmail("maria@example.com");
-
-        assertTrue(exists);
+        assertTrue(userRepository.existsByEmail("petr@example.com"));
     }
 
     @Test
-    @DisplayName("Should return false when email does not exist")
     void shouldReturnFalseWhenEmailDoesNotExist() {
-        boolean exists = userRepository.existsByEmail("ghost@example.com");
-
-        assertFalse(exists);
+        assertFalse(userRepository.existsByEmail("ghost@example.com"));
     }
 
     @Test
-    @DisplayName("Should return all saved users")
-    void shouldReturnAllUsers() {
-        userRepository.save(buildUser("User1", "Test", "user1@example.com"));
-        userRepository.save(buildUser("User2", "Test", "user2@example.com"));
+    void shouldUpdateExistingUser() {
+        User saved = userRepository.save(buildUser("Old", "Name", "update@example.com", true, false));
+        saved.setFirstName("New");
 
-        List<User> users = userRepository.findAll();
+        User updated = userRepository.saveAndFlush(saved);
 
-        assertEquals(2, users.size());
+        assertEquals("New", userRepository.findById(updated.getId()).orElseThrow().getFirstName());
     }
 
     @Test
-    @DisplayName("Should delete user")
     void shouldDeleteUser() {
-        User savedUser = userRepository.save(buildUser("Delete", "Me", "delete@example.com"));
+        User saved = userRepository.save(buildUser("Delete", "Me", "delete@example.com", true, false));
 
-        userRepository.delete(savedUser);
+        userRepository.delete(saved);
+        userRepository.flush();
 
-        Optional<User> foundUser = userRepository.findById(savedUser.getId());
-        assertTrue(foundUser.isEmpty());
+        assertTrue(userRepository.findById(saved.getId()).isEmpty());
     }
 
     @Test
-    @DisplayName("Should update existing user")
-    void shouldUpdateUser() {
-        User savedUser = userRepository.save(buildUser("OldName", "User", "update@example.com"));
-
-        savedUser.setFirstName("NewName");
-        User updatedUser = userRepository.save(savedUser);
-
-        Optional<User> foundUser = userRepository.findById(updatedUser.getId());
-
-        assertTrue(foundUser.isPresent());
-        assertEquals("NewName", foundUser.get().getFirstName());
-        assertEquals("update@example.com", foundUser.get().getEmail());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when saving user with duplicate email")
-    void shouldThrowExceptionWhenSavingDuplicateEmail() {
-        userRepository.saveAndFlush(buildUser("First", "User", "duplicate@example.com"));
-
-        User duplicateUser = buildUser("Second", "User", "duplicate@example.com");
+    void shouldThrowForDuplicateEmail() {
+        userRepository.saveAndFlush(buildUser("First", "User", "duplicate@example.com", true, false));
 
         assertThrows(DataIntegrityViolationException.class,
-                () -> userRepository.saveAndFlush(duplicateUser));
+                () -> userRepository.saveAndFlush(buildUser("Second", "User", "duplicate@example.com", true, false)));
     }
 
-    private User buildUser(String firstName, String lastName, String email) {
+    @Test
+    void shouldFindActiveUserById() {
+        User saved = userRepository.save(buildUser("Active", "User", "active@example.com", true, false));
+
+        Optional<User> found = userRepository.findByIdAndActiveTrue(saved.getId());
+
+        assertTrue(found.isPresent());
+        assertEquals("active@example.com", found.get().getEmail());
+    }
+
+    @Test
+    void shouldNotFindInactiveUserByIdAndActiveTrue() {
+        User saved = userRepository.save(buildUser("Inactive", "User", "inactive@example.com", false, false));
+
+        assertTrue(userRepository.findByIdAndActiveTrue(saved.getId()).isEmpty());
+    }
+
+    @Test
+    void shouldReturnOnlyActiveUsers() {
+        userRepository.save(buildUser("User1", "Test", "user1@example.com", true, false));
+        userRepository.save(buildUser("User2", "Test", "user2@example.com", false, false));
+        userRepository.save(buildUser("User3", "Test", "user3@example.com", true, true));
+
+        List<User> users = userRepository.findAllByActiveTrue();
+
+        assertEquals(2, users.size());
+        assertTrue(users.stream().allMatch(User::isActive));
+    }
+
+    private User buildUser(String firstName, String lastName, String email, boolean active, boolean banned) {
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -181,8 +156,9 @@ class UserRepositoryTest {
         user.setCity("Moscow");
         user.setAddressLine("Tverskaya 1");
         user.setPostalCode("125009");
-        user.setActive(true);
-        user.setBanned(false);
+        user.setRole(Role.USER);
+        user.setActive(active);
+        user.setBanned(banned);
         return user;
     }
 }
