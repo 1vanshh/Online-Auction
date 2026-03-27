@@ -1,5 +1,6 @@
-version: "3.9"
-
+networks:
+  auction-network:
+    driver: bridge
 services:
   postgres:
     image: postgres:17
@@ -19,6 +20,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - auction-network
 
   auth-service:
     build:
@@ -46,8 +49,8 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
       LOGGING_LEVEL_ROOT: INFO
-    ports:
-      - "8081:8081"
+    networks:
+      - auction-network
 
   auction-service:
     build:
@@ -75,8 +78,8 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
       LOGGING_LEVEL_ROOT: INFO
-    ports:
-      - "8082:8082"
+    networks:
+      - auction-network
 
   bidding-service:
     build:
@@ -104,8 +107,33 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
       LOGGING_LEVEL_ROOT: INFO
+    networks:
+      - auction-network
+
+  frontend-service:
+    build:
+      context: ./frontend/service
+      dockerfile: Dockerfile
+    container_name: online-auction-frontend-service
+    restart: unless-stopped
+    networks:
+      - auction-network
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: online-auction-nginx
+    restart: unless-stopped
     ports:
-      - "8083:8083"
+      - "80:80"
+    depends_on:
+      - auth-service
+      - auction-service
+      - bidding-service
+      - frontend-service
+    networks:
+      - auction-network
 
 volumes:
   postgres_data:

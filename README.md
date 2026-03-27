@@ -18,8 +18,8 @@ Change the database user and password in .env!
 
 ## Run frontend service
 
-1. Build and start frontend:
-   `docker compose up -d frontend-service`
+1. Build and start frontend together with nginx:
+   `docker compose up -d frontend-service nginx`
 
 2. Open:
-   `http://localhost:5173`
+   `http://localhost`
