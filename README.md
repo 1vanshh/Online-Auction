@@ -15,3 +15,11 @@
    `docker compose down`
 
 Change the database user and password in .env!
+
+## Run frontend service
+
+1. Build and start frontend:
+   `docker compose up -d frontend-service`
+
+2. Open:
+   `http://localhost:5173`
