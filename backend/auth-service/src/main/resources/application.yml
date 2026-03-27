@@ -1,12 +1,12 @@
 server:
-  port: ${BIDDING_SERVICE_PORT:8083}
+  port: ${AUTH_SERVICE_PORT:8081}
 
 spring:
   config:
     import: optional:file:.env[.properties],optional:file:../../.env[.properties]
 
   application:
-    name: bidding-service
+    name: auth-service
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:online_auction}
@@ -19,14 +19,14 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: bidding
+        default_schema: auth
         format_sql: true
     open-in-view: false
 
   flyway:
     enabled: true
-    default-schema: bidding
-    schemas: bidding
+    default-schema: auth
+    schemas: auth
     locations: classpath:db/migration
 
 logging:
@@ -35,6 +35,7 @@ logging:
     org.springframework.web: INFO
     org.hibernate.SQL: INFO
     org.flywaydb: INFO
+    com.auction.authservice: INFO
 
 management:
   endpoints:
