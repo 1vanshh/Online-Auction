@@ -6,6 +6,7 @@ import com.auction.authservice.dto.request.RefreshTokenRequest;
 import com.auction.authservice.dto.request.RegisterRequest;
 import com.auction.authservice.dto.response.AuthResponse;
 import com.auction.authservice.service.AuthService;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
