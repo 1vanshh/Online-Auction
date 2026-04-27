@@ -9,6 +9,9 @@ function Header({ user, onNavigate, onLogout }) {
 
       {user ? (
         <div className="header-actions">
+          <button className="nav-button" type="button" onClick={() => onNavigate('/account')}>
+            Account
+          </button>
           <div className="user-chip">
             <span className="user-chip__label">Signed in</span>
             <strong>{user.email}</strong>

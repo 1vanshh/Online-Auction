@@ -3,13 +3,14 @@ import Header from './components/Header.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
+import AccountPage from './pages/AccountPage.jsx';
 
 const AUTH_STORAGE_KEY = 'auction-auth';
 
 const getRouteFromHash = () => {
   const route = window.location.hash.replace('#', '');
 
-  if (route === '/login' || route === '/register') {
+  if (route === '/login' || route === '/register' || route === '/account') {
     return route;
   }
 
@@ -64,6 +65,23 @@ function App() {
     navigate('/');
   };
 
+  const handleUserUpdate = (user) => {
+    setAuthData((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        user
+      };
+    });
+  };
+
+  const handleAuthRefresh = (payload) => {
+    setAuthData(payload);
+  };
+
   let page = <HomePage user={authData?.user} onNavigate={navigate} />;
 
   if (route === '/login') {
@@ -72,6 +90,19 @@ function App() {
 
   if (route === '/register') {
     page = <RegisterPage onNavigate={navigate} onSuccess={handleAuthSuccess} />;
+  }
+
+  if (route === '/account') {
+    page = (
+      <AccountPage
+        token={authData?.accessToken}
+        refreshToken={authData?.refreshToken}
+        user={authData?.user}
+        onNavigate={navigate}
+        onUserUpdate={handleUserUpdate}
+        onAuthRefresh={handleAuthRefresh}
+      />
+    );
   }
 
   return (
