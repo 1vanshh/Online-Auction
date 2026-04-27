@@ -21,6 +21,7 @@ function HomePage({ user, onNavigate }) {
             </button>
           </div>
         )}
+
       </section>
     </main>
   );
