@@ -151,7 +151,7 @@ public class LotService {
         String reason = trim(r.reason());
         if (reason == null) reason = "Winner did not pay for lot #" + l.getId();
         jdbc.update("insert into auth.user_bans (user_id, reason, banned_until, created_by_user_id, active) values (?, ?, ?, ?, true)", l.getWinnerId(), reason, until, u.id());
-        jdbc.update("update auth.users set is_banned = true, updated_at = current_timestamp where id = ?", l.getWinnerId());
+        jdbc.update("update auth.users set is_banned = true, is_active = false, updated_at = current_timestamp where id = ?", l.getWinnerId());
     }
 
     private void ensureUserExists(Long id) {
