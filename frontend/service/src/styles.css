@@ -22,7 +22,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -120,6 +121,11 @@ button {
   max-width: 780px;
 }
 
+.hero-panel-compact {
+  min-height: auto;
+  padding: 64px 0 40px;
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -150,11 +156,239 @@ h1 {
   line-height: 1.65;
 }
 
+.auction-section {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.section-copy {
+  max-width: 360px;
+  margin: 0;
+  color: #5d574d;
+  line-height: 1.6;
+}
+
+.auction-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.filter-control {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-control span {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6a6257;
+}
+
+.filter-control select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #111111;
+  font: inherit;
+  outline: none;
+}
+
+.filter-control select:focus {
+  border-color: #111111;
+  box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.06);
+}
+
+.category-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.category-pill {
+  padding: 18px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.68);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.category-pill:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.category-pill strong,
+.category-pill span {
+  display: block;
+}
+
+.category-pill strong {
+  margin-bottom: 8px;
+  color: #111111;
+}
+
+.category-pill span {
+  color: #5d574d;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.category-pill-active {
+  border-color: #111111;
+  background: #111111;
+}
+
+.category-pill-active:hover {
+  background: #111111;
+}
+
+.category-pill-active strong,
+.category-pill-active span {
+  color: #f8f5ef;
+}
+
+.lot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.lot-card {
+  padding: 22px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px rgba(17, 17, 17, 0.06);
+}
+
+.lot-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.lot-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.lot-description {
+  margin: 0 0 18px;
+  color: #4f4b45;
+  line-height: 1.6;
+}
+
+.lot-category {
+  font-size: 0.82rem;
+  color: #6a6257;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: #edf8ef;
+  color: #215c31;
+}
+
+.status-draft {
+  background: #f1efe9;
+  color: #5f5648;
+}
+
+.status-finished {
+  background: #eef3fb;
+  color: #254a7b;
+}
+
+.status-cancelled {
+  background: #fff1f1;
+  color: #7c1d1d;
+}
+
+.lot-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.lot-meta div {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(17, 17, 17, 0.03);
+}
+
+.lot-meta dt {
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6a6257;
+}
+
+.lot-meta dd {
+  margin: 0;
+  color: #111111;
+  line-height: 1.45;
+}
+
+.auction-state {
+  padding: 20px 22px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #4f4b45;
+}
+
 .auth-layout {
   display: grid;
   grid-template-columns: minmax(260px, 420px) minmax(320px, 520px);
   gap: 28px;
   align-items: center;
+}
+
+.create-lot-layout {
+  grid-template-columns: minmax(260px, 420px) minmax(340px, 620px);
 }
 
 .auth-copy {
@@ -210,14 +444,27 @@ h1 {
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   border-color: #111111;
   transform: translateY(-1px);
   box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.06);
 }
 
+.field select,
 .field input::placeholder {
   color: #9b948b;
+}
+
+.field select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #111111;
+  outline: none;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .field small {
@@ -351,6 +598,11 @@ h1 {
   .auth-copy {
     padding-bottom: 0;
   }
+
+  .section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 560px) {
@@ -381,6 +633,10 @@ h1 {
   }
 
   .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lot-meta {
     grid-template-columns: 1fr;
   }
 
