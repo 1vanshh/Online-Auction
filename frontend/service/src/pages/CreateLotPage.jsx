@@ -226,7 +226,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       }
 
       setSuccessMessage('Lot created successfully');
-      setForm({ ...initialForm, endTime: toLocalDateTimeValue() });
+      onNavigate('/');
     } catch (error) {
       setServerError(error.message || 'Failed to create lot');
     } finally {

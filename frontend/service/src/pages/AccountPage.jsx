@@ -92,6 +92,18 @@ async function getProfileRequest(accessToken) {
   return { res, data };
 }
 
+async function getMyLotsRequest(accessToken) {
+  const res = await fetch('/api/auction/lots/my', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  const data = await res.json().catch(() => null);
+  return { res, data };
+}
+
 async function refreshAuthSession(refreshToken) {
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
@@ -105,6 +117,29 @@ async function refreshAuthSession(refreshToken) {
   return { res, data };
 }
 
+const formatPrice = (value) => {
+  if (value === null || value === undefined) {
+    return 'Not specified';
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  }).format(Number(value));
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return 'Not scheduled';
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(value));
+};
+
 function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAuthRefresh }) {
   const [form, setForm] = useState(createFormState(user));
   const [fieldErrors, setFieldErrors] = useState({});
@@ -112,6 +147,9 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [myLots, setMyLots] = useState([]);
+  const [lotsLoading, setLotsLoading] = useState(false);
+  const [lotsError, setLotsError] = useState('');
 
   useEffect(() => {
     setForm(createFormState(user));
@@ -166,6 +204,58 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
     };
 
     loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, refreshToken, user?.id]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMyLots = async () => {
+      setLotsLoading(true);
+      setLotsError('');
+
+      try {
+        let activeToken = token;
+        let { res, data } = await getMyLotsRequest(activeToken);
+
+        if ((res.status === 401 || res.status === 403) && refreshToken) {
+          const refreshResult = await refreshAuthSession(refreshToken);
+
+          if (refreshResult.res.ok && refreshResult.data?.accessToken) {
+            activeToken = refreshResult.data.accessToken;
+            if (!cancelled) {
+              onAuthRefresh(refreshResult.data);
+            }
+            ({ res, data } = await getMyLotsRequest(activeToken));
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(res.status === 401 || res.status === 403 ? 'Session expired. Please log in again.' : data?.message || 'Failed to load your lots');
+        }
+
+        if (!cancelled) {
+          setMyLots(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLotsError(error.message || 'Failed to load your lots');
+        }
+      } finally {
+        if (!cancelled) {
+          setLotsLoading(false);
+        }
+      }
+    };
+
+    loadMyLots();
 
     return () => {
       cancelled = true;
@@ -361,6 +451,57 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
             </button>
           </form>
         </div>
+      </section>
+
+      <section className="account-lots-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Your lots</p>
+            <h2>Items linked to your seller account.</h2>
+          </div>
+        </div>
+
+        {lotsLoading && <div className="auction-state">Loading your lots...</div>}
+        {lotsError && <div className="banner banner-error">{lotsError}</div>}
+
+        {!lotsLoading && !lotsError && myLots.length > 0 && (
+          <div className="lot-grid">
+            {myLots.map((lot) => (
+              <article className="lot-card" key={lot.id}>
+                <div className="lot-card__top">
+                  <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>{lot.status}</span>
+                  <span className="lot-category">{lot.categoryName || 'Uncategorized'}</span>
+                </div>
+
+                <h3>{lot.title}</h3>
+                <p className="lot-description">{lot.description || 'Description will be added later.'}</p>
+
+                <dl className="lot-meta">
+                  <div>
+                    <dt>Current price</dt>
+                    <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>Start price</dt>
+                    <dd>{formatPrice(lot.startPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>Bid step</dt>
+                    <dd>{formatPrice(lot.bidStep)}</dd>
+                  </div>
+                  <div>
+                    <dt>Ends at</dt>
+                    <dd>{formatDate(lot.endTime)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {!lotsLoading && !lotsError && myLots.length === 0 && (
+          <div className="auction-state">You have not created any lots yet.</div>
+        )}
       </section>
     </main>
   );

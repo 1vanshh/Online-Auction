@@ -565,6 +565,11 @@ h1 {
   border-top: 1px solid rgba(17, 17, 17, 0.08);
 }
 
+.account-lots-section {
+  width: min(1120px, 100%);
+  margin: 40px auto 0;
+}
+
 .auth-footnote {
   margin: 18px 0 0;
   color: #5d574d;
