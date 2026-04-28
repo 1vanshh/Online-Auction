@@ -80,6 +80,30 @@ async function updateProfileRequest(payload, accessToken) {
   return { res, data };
 }
 
+async function getProfileRequest(accessToken) {
+  const res = await fetch('/api/users/me', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  const data = await res.json().catch(() => null);
+  return { res, data };
+}
+
+async function getMyLotsRequest(accessToken) {
+  const res = await fetch('/api/auction/lots/my', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  const data = await res.json().catch(() => null);
+  return { res, data };
+}
+
 async function refreshAuthSession(refreshToken) {
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
@@ -93,12 +117,39 @@ async function refreshAuthSession(refreshToken) {
   return { res, data };
 }
 
+const formatPrice = (value) => {
+  if (value === null || value === undefined) {
+    return 'Not specified';
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  }).format(Number(value));
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return 'Not scheduled';
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(value));
+};
+
 function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAuthRefresh }) {
   const [form, setForm] = useState(createFormState(user));
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [myLots, setMyLots] = useState([]);
+  const [lotsLoading, setLotsLoading] = useState(false);
+  const [lotsError, setLotsError] = useState('');
 
   useEffect(() => {
     setForm(createFormState(user));
@@ -106,6 +157,110 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
     setServerError('');
     setSuccessMessage('');
   }, [user]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      setProfileLoading(true);
+      setServerError('');
+
+      try {
+        let activeToken = token;
+        let { res, data } = await getProfileRequest(activeToken);
+
+        if ((res.status === 401 || res.status === 403) && refreshToken) {
+          const refreshResult = await refreshAuthSession(refreshToken);
+
+          if (refreshResult.res.ok && refreshResult.data?.accessToken) {
+            activeToken = refreshResult.data.accessToken;
+            if (!cancelled) {
+              onAuthRefresh(refreshResult.data);
+            }
+            ({ res, data } = await getProfileRequest(activeToken));
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(res.status === 401 || res.status === 403 ? 'Session expired. Please log in again.' : data?.message || 'Failed to load profile');
+        }
+
+        if (!cancelled) {
+          onUserUpdate(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setServerError(error.message || 'Failed to load profile');
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, refreshToken, user?.id]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMyLots = async () => {
+      setLotsLoading(true);
+      setLotsError('');
+
+      try {
+        let activeToken = token;
+        let { res, data } = await getMyLotsRequest(activeToken);
+
+        if ((res.status === 401 || res.status === 403) && refreshToken) {
+          const refreshResult = await refreshAuthSession(refreshToken);
+
+          if (refreshResult.res.ok && refreshResult.data?.accessToken) {
+            activeToken = refreshResult.data.accessToken;
+            if (!cancelled) {
+              onAuthRefresh(refreshResult.data);
+            }
+            ({ res, data } = await getMyLotsRequest(activeToken));
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(res.status === 401 || res.status === 403 ? 'Session expired. Please log in again.' : data?.message || 'Failed to load your lots');
+        }
+
+        if (!cancelled) {
+          setMyLots(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLotsError(error.message || 'Failed to load your lots');
+        }
+      } finally {
+        if (!cancelled) {
+          setLotsLoading(false);
+        }
+      }
+    };
+
+    loadMyLots();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, refreshToken, user?.id]);
 
   if (!user) {
     return (
@@ -224,6 +379,8 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
         </div>
 
         <div className="auth-card">
+          {profileLoading && <div className="banner">Loading current profile...</div>}
+
           <div className="account-summary">
             <div className="account-grid">
               {profileFields.map(({ key, label }) => (
@@ -239,49 +396,49 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
             <div className="form-grid">
               <label className="field">
                 <span>First name</span>
-                <input name="firstName" type="text" value={form.firstName} onChange={handleChange} disabled={loading} />
+                <input name="firstName" type="text" value={form.firstName} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.firstName && <small>{fieldErrors.firstName}</small>}
               </label>
 
               <label className="field">
                 <span>Last name</span>
-                <input name="lastName" type="text" value={form.lastName} onChange={handleChange} disabled={loading} />
+                <input name="lastName" type="text" value={form.lastName} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.lastName && <small>{fieldErrors.lastName}</small>}
               </label>
 
               <label className="field">
                 <span>Phone</span>
-                <input name="phone" type="tel" placeholder="+79991234567" value={form.phone} onChange={handleChange} disabled={loading} />
+                <input name="phone" type="tel" placeholder="+79991234567" value={form.phone} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.phone && <small>{fieldErrors.phone}</small>}
               </label>
 
               <label className="field">
                 <span>Birth date</span>
-                <input name="birthDate" type="date" value={form.birthDate} onChange={handleChange} disabled={loading} />
+                <input name="birthDate" type="date" value={form.birthDate} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.birthDate && <small>{fieldErrors.birthDate}</small>}
               </label>
 
               <label className="field field-wide">
                 <span>Country</span>
-                <input name="country" type="text" value={form.country} onChange={handleChange} disabled={loading} />
+                <input name="country" type="text" value={form.country} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.country && <small>{fieldErrors.country}</small>}
               </label>
 
               <label className="field">
                 <span>City</span>
-                <input name="city" type="text" value={form.city} onChange={handleChange} disabled={loading} />
+                <input name="city" type="text" value={form.city} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.city && <small>{fieldErrors.city}</small>}
               </label>
 
               <label className="field">
                 <span>Postal code</span>
-                <input name="postalCode" type="text" value={form.postalCode} onChange={handleChange} disabled={loading} />
+                <input name="postalCode" type="text" value={form.postalCode} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.postalCode && <small>{fieldErrors.postalCode}</small>}
               </label>
 
               <label className="field field-wide">
                 <span>Address</span>
-                <input name="addressLine" type="text" value={form.addressLine} onChange={handleChange} disabled={loading} />
+                <input name="addressLine" type="text" value={form.addressLine} onChange={handleChange} disabled={loading || profileLoading} />
                 {fieldErrors.addressLine && <small>{fieldErrors.addressLine}</small>}
               </label>
             </div>
@@ -289,11 +446,62 @@ function AccountPage({ token, refreshToken, user, onNavigate, onUserUpdate, onAu
             {serverError && <div className="banner banner-error">{serverError}</div>}
             {successMessage && <div className="banner banner-success">{successMessage}</div>}
 
-            <button className="submit-button" type="submit" disabled={loading}>
+            <button className="submit-button" type="submit" disabled={loading || profileLoading}>
               {loading ? 'Saving...' : 'Save changes'}
             </button>
           </form>
         </div>
+      </section>
+
+      <section className="account-lots-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Your lots</p>
+            <h2>Items linked to your seller account.</h2>
+          </div>
+        </div>
+
+        {lotsLoading && <div className="auction-state">Loading your lots...</div>}
+        {lotsError && <div className="banner banner-error">{lotsError}</div>}
+
+        {!lotsLoading && !lotsError && myLots.length > 0 && (
+          <div className="lot-grid">
+            {myLots.map((lot) => (
+              <article className="lot-card" key={lot.id}>
+                <div className="lot-card__top">
+                  <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>{lot.status}</span>
+                  <span className="lot-category">{lot.categoryName || 'Uncategorized'}</span>
+                </div>
+
+                <h3>{lot.title}</h3>
+                <p className="lot-description">{lot.description || 'Description will be added later.'}</p>
+
+                <dl className="lot-meta">
+                  <div>
+                    <dt>Current price</dt>
+                    <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>Start price</dt>
+                    <dd>{formatPrice(lot.startPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>Bid step</dt>
+                    <dd>{formatPrice(lot.bidStep)}</dd>
+                  </div>
+                  <div>
+                    <dt>Ends at</dt>
+                    <dd>{formatDate(lot.endTime)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {!lotsLoading && !lotsError && myLots.length === 0 && (
+          <div className="auction-state">You have not created any lots yet.</div>
+        )}
       </section>
     </main>
   );

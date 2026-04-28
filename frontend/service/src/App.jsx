@@ -4,13 +4,14 @@ import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
+import CreateLotPage from './pages/CreateLotPage.jsx';
 
 const AUTH_STORAGE_KEY = 'auction-auth';
 
 const getRouteFromHash = () => {
   const route = window.location.hash.replace('#', '');
 
-  if (route === '/login' || route === '/register' || route === '/account') {
+  if (route === '/login' || route === '/register' || route === '/account' || route === '/lots/create') {
     return route;
   }
 
@@ -100,6 +101,18 @@ function App() {
         user={authData?.user}
         onNavigate={navigate}
         onUserUpdate={handleUserUpdate}
+        onAuthRefresh={handleAuthRefresh}
+      />
+    );
+  }
+
+  if (route === '/lots/create') {
+    page = (
+      <CreateLotPage
+        token={authData?.accessToken}
+        refreshToken={authData?.refreshToken}
+        user={authData?.user}
+        onNavigate={navigate}
         onAuthRefresh={handleAuthRefresh}
       />
     );

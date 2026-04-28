@@ -9,6 +9,9 @@ function Header({ user, onNavigate, onLogout }) {
 
       {user ? (
         <div className="header-actions">
+          <button className="nav-button" type="button" onClick={() => onNavigate('/lots/create')}>
+            Add lot
+          </button>
           <button className="nav-button" type="button" onClick={() => onNavigate('/account')}>
             Account
           </button>
