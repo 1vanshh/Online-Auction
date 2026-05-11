@@ -7,6 +7,8 @@ import com.auction.authservice.exception.UnauthorizedException;
 import com.auction.authservice.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
+
+import java.util.List;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +30,11 @@ public class UserController {
     @PutMapping("/me")
     public UserResponse updateCurrentUser(@Valid @RequestBody UpdateUserRequest request) {
         return userService.updateByEmail(getCurrentEmail(), request);
+    }
+
+    @GetMapping("/admin")
+    public List<UserResponse> getAllUsers() {
+        return userService.getAllUsers();
     }
 
     @GetMapping("/admin/{id}")

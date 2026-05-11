@@ -60,19 +60,19 @@ export async function authedRequest({ url, token, refreshToken, onAuthRefresh, o
 
 export const formatPrice = (value) => {
   if (value === null || value === undefined || value === '') {
-    return 'Not specified';
+    return 'Не указано';
   }
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'RUB',
     maximumFractionDigits: 2
   }).format(Number(value));
 };
 
 export const formatDate = (value) => {
   if (!value) {
-    return 'Not scheduled';
+    return 'Не назначено';
   }
 
   const date = new Date(value);
@@ -80,11 +80,41 @@ export const formatDate = (value) => {
     return String(value);
   }
 
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat('ru-RU', {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(date);
 };
+
+export const statusLabels = {
+  DRAFT: 'Черновик',
+  ACTIVE: 'Активен',
+  FINISHED: 'Завершён',
+  CANCELLED: 'Отменён'
+};
+
+export const roleLabels = {
+  USER: 'Пользователь',
+  ADMIN: 'Администратор'
+};
+
+export const formatStatus = (status) => statusLabels[status] || status || 'Неизвестно';
+
+export const userDisplayName = (user) => {
+  if (!user) {
+    return '';
+  }
+
+  const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  return name || user.email || `Пользователь #${user.id}`;
+};
+
+export const winnerDisplayName = (lot, result) => (
+  lot?.winnerName ||
+  result?.winnerName ||
+  (lot?.winnerId ? `Пользователь #${lot.winnerId}` : '') ||
+  (result?.winnerId ? `Пользователь #${result.winnerId}` : '')
+);
 
 export const minimumBidForLot = (lot) => {
   const currentPrice = Number(lot?.currentPrice ?? lot?.startPrice ?? 0);

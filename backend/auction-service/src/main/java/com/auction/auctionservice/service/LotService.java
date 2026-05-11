@@ -66,6 +66,7 @@ public class LotService {
         l.setStartTime(LocalDateTime.now());
         l.setEndTime(r.endTime());
         Lot saved = lots.save(l);
+        replaceMainImage(saved.getId(), r.mainImageUrl());
         addHistory(saved, null, saved.getStatus(), u.id(), "Lot created as draft");
         return mapper.toLotResponse(saved);
     }
@@ -90,6 +91,7 @@ public class LotService {
                 throw new BadRequestException("End time must be in the future");
             l.setEndTime(r.endTime());
         }
+        if (r.mainImageUrl() != null) replaceMainImage(l.getId(), r.mainImageUrl());
         return mapper.toLotResponse(l);
     }
 
@@ -152,6 +154,15 @@ public class LotService {
         if (reason == null) reason = "Winner did not pay for lot #" + l.getId();
         jdbc.update("insert into auth.user_bans (user_id, reason, banned_until, created_by_user_id, active) values (?, ?, ?, ?, true)", l.getWinnerId(), reason, until, u.id());
         jdbc.update("update auth.users set is_banned = true, is_active = false, updated_at = current_timestamp where id = ?", l.getWinnerId());
+    }
+
+    private void replaceMainImage(Long lotId, String imageUrl) {
+        jdbc.update("delete from auction.lot_images where lot_id = ?", lotId);
+        String normalized = trim(imageUrl);
+        if (normalized == null) return;
+        if (normalized.length() < 5 || normalized.length() > 500)
+            throw new BadRequestException("Image URL must contain from 5 to 500 characters");
+        jdbc.update("insert into auction.lot_images (lot_id, image_url, is_main) values (?, ?, true)", lotId, normalized);
     }
 
     private void ensureUserExists(Long id) {

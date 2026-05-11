@@ -151,11 +151,10 @@ function RegisterPage({ onNavigate, onSuccess }) {
     <main className="page">
       <section className="auth-layout">
         <div className="auth-copy">
-          <p className="eyebrow">Register</p>
+          <p className="eyebrow">Регистрация</p>
           <h1>Создайте аккаунт для участия в торгах.</h1>
           <p className="lede">
-            Форма соответствует backend-контракту RegisterRequest: имя, фамилия, email,
-            пароль и опциональный телефон.
+            После регистрации вы сможете участвовать в торгах, создавать лоты и отслеживать свои ставки.
           </p>
         </div>
 
@@ -239,13 +238,13 @@ function RegisterPage({ onNavigate, onSuccess }) {
           )}
 
           <button className="submit-button" type="submit" disabled={loading}>
-            {loading ? 'Creating account...' : 'Register'}
+            {loading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
           </button>
 
           <p className="auth-footnote">
-            Already have an account?{' '}
+            Уже есть аккаунт?{' '}
             <button className="inline-link" type="button" onClick={() => onNavigate('/login')}>
-              Login
+              Войти
             </button>
           </p>
         </form>

@@ -7,7 +7,8 @@ const initialForm = {
   categoryId: '',
   startPrice: '',
   bidStep: '',
-  endTime: ''
+  endTime: '',
+  mainImageUrl: ''
 };
 
 const toLocalDateTimeValue = () => {
@@ -22,36 +23,40 @@ const validateForm = (form) => {
   const errors = {};
 
   if (!form.title.trim()) {
-    errors.title = 'Title is required';
+    errors.title = 'Укажите название';
   } else if (form.title.trim().length < 3) {
-    errors.title = 'Minimum 3 characters';
+    errors.title = 'Минимум 3 символа';
   } else if (form.title.trim().length > 255) {
-    errors.title = 'Maximum 255 characters';
+    errors.title = 'Максимум 255 символов';
   }
 
   if (!form.categoryId) {
-    errors.categoryId = 'Choose a category';
+    errors.categoryId = 'Выберите категорию';
   }
 
   if (!form.startPrice) {
-    errors.startPrice = 'Start price is required';
+    errors.startPrice = 'Укажите начальную цену';
   } else if (Number(form.startPrice) <= 0) {
-    errors.startPrice = 'Value must be greater than 0';
+    errors.startPrice = 'Значение должно быть больше 0';
   }
 
   if (!form.bidStep) {
-    errors.bidStep = 'Bid step is required';
+    errors.bidStep = 'Укажите шаг ставки';
   } else if (Number(form.bidStep) <= 0) {
-    errors.bidStep = 'Value must be greater than 0';
+    errors.bidStep = 'Значение должно быть больше 0';
   }
 
   if (!form.endTime) {
-    errors.endTime = 'End time is required';
+    errors.endTime = 'Укажите дату и время окончания';
   } else {
     const endTime = new Date(form.endTime);
     if (Number.isNaN(endTime.getTime()) || endTime <= new Date()) {
-      errors.endTime = 'Choose a future date and time';
+      errors.endTime = 'Выберите будущую дату';
     }
+  }
+
+  if (form.mainImageUrl.trim() && form.mainImageUrl.trim().length > 500) {
+    errors.mainImageUrl = 'Ссылка на фото не должна быть длиннее 500 символов';
   }
 
   return errors;
@@ -113,13 +118,13 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       try {
         const { res, data } = await loadCategories(controller.signal);
         if (!res.ok) {
-          throw new Error(data?.message || 'Failed to load categories');
+          throw new Error(data?.message || 'Не удалось загрузить категории');
         }
 
         setCategories(Array.isArray(data) ? data : []);
       } catch (error) {
         if (error.name !== 'AbortError') {
-          setServerError(error.message || 'Failed to load categories');
+          setServerError(error.message || 'Не удалось загрузить категории');
         }
       } finally {
         setCategoriesLoading(false);
@@ -138,17 +143,15 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       <main className="page">
         <section className="auth-layout">
           <div className="auth-copy">
-            <p className="eyebrow">Create lot</p>
-            <h1>Publish items after sign in.</h1>
-            <p className="lede">
-              Creating a lot is available only for authenticated users because the auction backend links each lot to a seller.
-            </p>
+            <p className="eyebrow">Создание лота</p>
+            <h1>Размещение доступно после входа.</h1>
+            <p className="lede">Лот привязывается к вашему аккаунту, поэтому создать его может только авторизованный пользователь.</p>
           </div>
 
           <div className="auth-card account-empty">
-            <p className="account-empty__text">Sign in to create and manage your auction lots.</p>
+            <p className="account-empty__text">Войдите, чтобы создать и управлять своими лотами.</p>
             <button className="submit-button" type="button" onClick={() => onNavigate('/login')}>
-              Login
+              Войти
             </button>
           </div>
         </section>
@@ -193,7 +196,8 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       categoryId: Number(form.categoryId),
       startPrice: Number(form.startPrice),
       bidStep: Number(form.bidStep),
-      endTime: toLocalDateTimePayload(form.endTime)
+      endTime: toLocalDateTimePayload(form.endTime),
+      mainImageUrl: form.mainImageUrl.trim() || null
     };
 
     setLoading(true);
@@ -220,16 +224,16 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
         }
 
         if (res.status === 401 || res.status === 403) {
-          throw new Error('Session expired. Please log in again.');
+          throw new Error('Сессия истекла. Войдите снова.');
         }
 
-        throw new Error(data?.message || 'Failed to create lot');
+        throw new Error(data?.message || 'Не удалось создать лот');
       }
 
-      setSuccessMessage('Lot created successfully');
+      setSuccessMessage('Лот создан');
       onNavigate(`/lots/${data.id}`);
     } catch (error) {
-      setServerError(error.message || 'Failed to create lot');
+      setServerError(error.message || 'Не удалось создать лот');
     } finally {
       setLoading(false);
     }
@@ -239,21 +243,21 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
     <main className="page">
       <section className="auth-layout create-lot-layout">
         <div className="auth-copy">
-          <p className="eyebrow">Create lot</p>
-          <h1>Publish a new auction item.</h1>
+          <p className="eyebrow">Новый лот</p>
+          <h1>Опубликуйте предмет для торгов.</h1>
           <p className="lede">
-            Fill in the core sale parameters: category, opening price, bid step and the auction end date.
+            Укажите категорию, стартовую цену, шаг ставки, время завершения и ссылку на фото. Фото сохраняется в БД как основное изображение лота.
           </p>
         </div>
 
         <form className="auth-card" onSubmit={handleSubmit}>
           <div className="form-grid">
             <label className="field field-wide">
-              <span>Title</span>
+              <span>Название</span>
               <input
                 name="title"
                 type="text"
-                placeholder="Vintage mechanical watch"
+                placeholder="Винтажные часы"
                 value={form.title}
                 onChange={handleChange}
                 disabled={loading || categoriesLoading}
@@ -262,11 +266,10 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             </label>
 
             <label className="field field-wide">
-              <span>Description</span>
-              <input
+              <span>Описание</span>
+              <textarea
                 name="description"
-                type="text"
-                placeholder="Short description of the item"
+                placeholder="Состояние, комплектация, особенности"
                 value={form.description}
                 onChange={handleChange}
                 disabled={loading || categoriesLoading}
@@ -274,17 +277,34 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
               {fieldErrors.description && <small>{fieldErrors.description}</small>}
             </label>
 
+            <label className="field field-wide">
+              <span>Фото лота</span>
+              <input
+                name="mainImageUrl"
+                type="url"
+                placeholder="https://example.com/photo.jpg"
+                value={form.mainImageUrl}
+                onChange={handleChange}
+                disabled={loading || categoriesLoading}
+              />
+              {fieldErrors.mainImageUrl ? (
+                <small>{fieldErrors.mainImageUrl}</small>
+              ) : (
+                <small className="hint-text">Можно оставить пустым. Ссылка сохранится в auction.lot_images.</small>
+              )}
+            </label>
+
             <label className="field">
-              <span>Category</span>
+              <span>Категория</span>
               <select
                 name="categoryId"
                 value={form.categoryId}
                 onChange={handleChange}
                 disabled={loading || categoriesLoading}
               >
-                <option value="">Select category</option>
+                <option value="">Выберите категорию</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={String(category.id)}>
+                  <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))}
@@ -293,7 +313,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             </label>
 
             <label className="field">
-              <span>End time</span>
+              <span>Окончание</span>
               <input
                 name="endTime"
                 type="datetime-local"
@@ -305,13 +325,13 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             </label>
 
             <label className="field">
-              <span>Start price</span>
+              <span>Начальная цена</span>
               <input
                 name="startPrice"
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="100.00"
+                placeholder="1000"
                 value={form.startPrice}
                 onChange={handleChange}
                 disabled={loading || categoriesLoading}
@@ -320,13 +340,13 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             </label>
 
             <label className="field">
-              <span>Bid step</span>
+              <span>Шаг ставки</span>
               <input
                 name="bidStep"
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="5.00"
+                placeholder="100"
                 value={form.bidStep}
                 onChange={handleChange}
                 disabled={loading || categoriesLoading}
@@ -335,12 +355,11 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             </label>
           </div>
 
-          {categoriesLoading && <div className="banner">Loading categories...</div>}
           {serverError && <div className="banner banner-error">{serverError}</div>}
           {successMessage && <div className="banner banner-success">{successMessage}</div>}
 
           <button className="submit-button" type="submit" disabled={loading || categoriesLoading}>
-            {loading ? 'Publishing...' : 'Create lot'}
+            {loading ? 'Создаём...' : 'Создать лот'}
           </button>
         </form>
       </section>

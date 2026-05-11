@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { authedRequest, formatDate, formatPrice, minimumBidForLot, requestJson } from '../api.js';
+import { authedRequest, formatDate, formatPrice, formatStatus, minimumBidForLot, requestJson, winnerDisplayName } from '../api.js';
 
 async function loadLotBundle(lotId, signal) {
   const [lotResult, bidsResult, resultResult] = await Promise.all([
@@ -9,19 +9,19 @@ async function loadLotBundle(lotId, signal) {
   ]);
 
   if (!lotResult.res.ok) {
-    throw new Error(lotResult.data?.message || 'Failed to load lot');
+    throw new Error(lotResult.data?.message || 'Не удалось загрузить лот');
   }
 
   if (!lotResult.isJson || !lotResult.data || typeof lotResult.data !== 'object') {
-    throw new Error('Frontend could not load lot JSON. Open the app through http://localhost/ or configure the Vite API proxy.');
+    throw new Error('Не удалось получить JSON лота. Откройте приложение через http://localhost/ или проверьте proxy Vite.');
   }
 
   if (!bidsResult.res.ok) {
-    throw new Error(bidsResult.data?.message || 'Failed to load bids');
+    throw new Error(bidsResult.data?.message || 'Не удалось загрузить ставки');
   }
 
   if (!bidsResult.isJson || !Array.isArray(bidsResult.data)) {
-    throw new Error('Frontend could not load bids JSON. Open the app through http://localhost/ or configure the Vite API proxy.');
+    throw new Error('Не удалось получить JSON ставок. Откройте приложение через http://localhost/ или проверьте proxy Vite.');
   }
 
   return {
@@ -62,7 +62,7 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
       setBidAmount(String(minimumBidForLot(bundle.lot)));
     } catch (requestError) {
       if (!signal?.aborted && version === loadVersion.current) {
-        setError(requestError.message || 'Failed to load lot');
+        setError(requestError.message || 'Не удалось загрузить лот');
       }
     } finally {
       if (!signal?.aborted && version === loadVersion.current) {
@@ -82,8 +82,9 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
   const isAdmin = user?.role === 'ADMIN';
   const canBid = Boolean(user && lot?.status === 'ACTIVE' && !isSeller);
   const canManageLot = Boolean(user && (isSeller || isAdmin));
+  const winnerName = winnerDisplayName(lot, result);
 
-  const runLotAction = async (url, options = {}, successText = 'Action completed') => {
+  const runLotAction = async (url, options = {}, successText = 'Действие выполнено') => {
     setActionLoading(true);
     setActionError('');
     setSuccessMessage('');
@@ -98,7 +99,7 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
       });
 
       if (!res.ok) {
-        throw new Error(data?.message || 'Action failed');
+        throw new Error(data?.message || 'Не удалось выполнить действие');
       }
 
       setSuccessMessage(successText);
@@ -106,9 +107,10 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
       setLot(bundle.lot);
       setBids(bundle.bids);
       setResult(bundle.result);
+      setBidAmount(String(minimumBidForLot(bundle.lot)));
       return data;
     } catch (requestError) {
-      setActionError(requestError.message || 'Action failed');
+      setActionError(requestError.message || 'Не удалось выполнить действие');
       return null;
     } finally {
       setActionLoading(false);
@@ -119,13 +121,13 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
     event.preventDefault();
 
     if (!lot) {
-      setActionError('Lot is still loading. Refresh the page and try again.');
+      setActionError('Лот ещё загружается. Обновите страницу и попробуйте снова.');
       return;
     }
 
     const amount = Number(bidAmount);
     if (!Number.isFinite(amount) || amount < minimumBid) {
-      setActionError(`Bid must be at least ${formatPrice(minimumBid)}`);
+      setActionError(`Минимальная ставка: ${formatPrice(minimumBid)}`);
       return;
     }
 
@@ -135,14 +137,14 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ lotId: Number(lotId), amount })
-    }, 'Bid placed successfully');
+    }, 'Ставка принята');
   };
 
   if (loading) {
     return (
       <main className="page">
         <section className="auction-section">
-          <div className="auction-state">Loading lot details...</div>
+          <div className="auction-state">Загружаем лот...</div>
         </section>
       </main>
     );
@@ -154,7 +156,7 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
         <section className="auction-section">
           <div className="banner banner-error">{error}</div>
           <button className="nav-button" type="button" onClick={() => onNavigate('/')}>
-            Back to catalog
+            Вернуться в каталог
           </button>
         </section>
       </main>
@@ -165,13 +167,15 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
     return (
       <main className="page">
         <section className="auction-section">
-          <div className="auction-state">Loading lot details...</div>
-          <button className="nav-button" type="button" onClick={() => load()}>
-            Reload lot
-          </button>
-          <button className="nav-button" type="button" onClick={() => onNavigate('/')}>
-            Back to catalog
-          </button>
+          <div className="auction-state">Лот ещё загружается...</div>
+          <div className="card-actions">
+            <button className="nav-button" type="button" onClick={() => load()}>
+              Загрузить снова
+            </button>
+            <button className="nav-button" type="button" onClick={() => onNavigate('/')}>
+              Вернуться в каталог
+            </button>
+          </div>
         </section>
       </main>
     );
@@ -179,160 +183,190 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
 
   return (
     <main className="page">
-      <section className="auction-section lot-details-layout">
-        <div className="lot-details-main">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Lot #{lot.id}</p>
-              <h2>{lot.title}</h2>
-            </div>
-            <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>{lot.status}</span>
+      <section className="auction-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Лот #{lot.id}</p>
+            <h2>{lot.title}</h2>
           </div>
-
-          <article className="lot-card lot-card-large">
-            <p className="lot-description">{lot.description || 'Description will be added later.'}</p>
-
-            <dl className="lot-meta">
-              <div>
-                <dt>Category</dt>
-                <dd>{lot.categoryName || 'Uncategorized'}</dd>
-              </div>
-              <div>
-                <dt>Current price</dt>
-                <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
-              </div>
-              <div>
-                <dt>Start price</dt>
-                <dd>{formatPrice(lot.startPrice)}</dd>
-              </div>
-              <div>
-                <dt>Bid step</dt>
-                <dd>{formatPrice(lot.bidStep)}</dd>
-              </div>
-              <div>
-                <dt>Start time</dt>
-                <dd>{formatDate(lot.startTime)}</dd>
-              </div>
-              <div>
-                <dt>End time</dt>
-                <dd>{formatDate(lot.endTime)}</dd>
-              </div>
-            </dl>
-          </article>
-
-          <section className="lot-card lot-card-large">
-            <div className="section-heading section-heading-tight">
-              <div>
-                <p className="eyebrow">Bids</p>
-                <h2>Bid history</h2>
-              </div>
-            </div>
-
-            {bids.length > 0 ? (
-              <div className="data-list">
-                {bids.map((bid) => (
-                  <div className="data-row" key={bid.id}>
-                    <span>Bidder #{bid.bidderId}</span>
-                    <strong>{formatPrice(bid.amount)}</strong>
-                    <small>{formatDate(bid.createdAt)}</small>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="auction-state">There are no bids yet.</div>
-            )}
-          </section>
+          <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>{formatStatus(lot.status)}</span>
         </div>
 
-        <aside className="lot-details-side">
-          <div className="auth-card sticky-card">
-            <p className="eyebrow">Participation</p>
-            <h3 className="side-title">Place a bid</h3>
+        <div className="lot-details-layout">
+          <div className="lot-details-main">
+            <article className="lot-card lot-card-large details-card">
+              {lot.mainImageUrl && (
+                <div className="lot-hero-image" style={{ backgroundImage: `url(${lot.mainImageUrl})` }} />
+              )}
+              <p className="lot-description lot-description-large">{lot.description || 'Описание пока не добавлено.'}</p>
 
-            {result && (
-              <div className="result-box">
-                <span>Current winner</span>
-                <strong>{result.winnerId ? `User #${result.winnerId}` : 'No winner yet'}</strong>
-                <small>{result.finalPrice ? `Final price: ${formatPrice(result.finalPrice)}` : 'Result is not final'}</small>
-                {result.paymentDeadline && <small>Payment deadline: {formatDate(result.paymentDeadline)}</small>}
-                <small>{result.paid ? 'Payment received' : 'Payment is pending'}</small>
+              {lot.status === 'FINISHED' && (
+                <div className="winner-strip winner-strip-large">
+                  <span>Победитель аукциона</span>
+                  <strong>{winnerName || 'Не определён'}</strong>
+                </div>
+              )}
+
+              <dl className="lot-meta">
+                <div>
+                  <dt>Категория</dt>
+                  <dd>{lot.categoryName || 'Без категории'}</dd>
+                </div>
+                <div>
+                  <dt>Текущая цена</dt>
+                  <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
+                </div>
+                <div>
+                  <dt>Начальная цена</dt>
+                  <dd>{formatPrice(lot.startPrice)}</dd>
+                </div>
+                <div>
+                  <dt>Шаг ставки</dt>
+                  <dd>{formatPrice(lot.bidStep)}</dd>
+                </div>
+                <div>
+                  <dt>Начало</dt>
+                  <dd>{formatDate(lot.startTime)}</dd>
+                </div>
+                <div>
+                  <dt>Окончание</dt>
+                  <dd>{formatDate(lot.endTime)}</dd>
+                </div>
+                <div>
+                  <dt>Продавец</dt>
+                  <dd>{lot.sellerName || `Пользователь #${lot.sellerId}`}</dd>
+                </div>
+                <div>
+                  <dt>Победитель</dt>
+                  <dd>{winnerName || 'Пока нет'}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <section className="lot-card lot-card-large">
+              <div className="section-heading section-heading-tight">
+                <div>
+                  <p className="eyebrow">Ставки</p>
+                  <h2>История ставок</h2>
+                </div>
               </div>
-            )}
 
-            {!user && (
-              <div className="auction-state">
-                You can browse this lot without registration. Log in to place a bid.
-              </div>
-            )}
-
-            {user && isSeller && (
-              <div className="auction-state">Sellers cannot bid on their own lots.</div>
-            )}
-
-            {user && lot.status !== 'ACTIVE' && (
-              <div className="auction-state">Bids are available only for active lots.</div>
-            )}
-
-            {canBid && (
-              <form onSubmit={handleBidSubmit}>
-                <label className="field">
-                  <span>Bid amount</span>
-                  <input
-                    type="number"
-                    min={minimumBid}
-                    step="0.01"
-                    value={bidAmount}
-                    onChange={(event) => setBidAmount(event.target.value)}
-                    disabled={actionLoading}
-                  />
-                  <small>Minimum bid: {formatPrice(minimumBid)}</small>
-                </label>
-
-                <button className="submit-button" type="submit" disabled={actionLoading}>
-                  {actionLoading ? 'Sending...' : 'Place bid'}
-                </button>
-              </form>
-            )}
-
-            {!user && (
-              <button className="submit-button" type="button" onClick={() => onNavigate('/login')}>
-                Login to bid
-              </button>
-            )}
-
-            {actionError && <div className="banner banner-error">{actionError}</div>}
-            {successMessage && <div className="banner banner-success">{successMessage}</div>}
+              {bids.length > 0 ? (
+                <div className="data-list">
+                  {bids.map((bid) => (
+                    <div className="data-row" key={bid.id}>
+                      <span>Участник #{bid.bidderId}</span>
+                      <strong>{formatPrice(bid.amount)}</strong>
+                      <small>{formatDate(bid.createdAt)}</small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="auction-state">Ставок пока нет.</div>
+              )}
+            </section>
           </div>
 
-          {canManageLot && (
-            <div className="auth-card sticky-card manage-card">
-              <p className="eyebrow">Lot controls</p>
-              <h3 className="side-title">Manage status</h3>
-              <div className="card-actions card-actions-column">
-                {lot.status === 'DRAFT' && (
-                  <button
-                    className="nav-button nav-button-dark"
-                    type="button"
-                    disabled={actionLoading}
-                    onClick={() => runLotAction(`/api/auction/lots/${lot.id}/activate`, { method: 'POST' }, 'Lot activated')}
-                  >
-                    Activate lot
+          <aside className="lot-details-side">
+            <div className="auth-card sticky-card bid-card">
+              <p className="eyebrow">Участие</p>
+              <h3 className="side-title">Сделать ставку</h3>
+
+              {result && (
+                <div className="result-box">
+                  <span>Текущий победитель</span>
+                  <strong>{winnerName || 'Пока нет победителя'}</strong>
+                  <small>{result.finalPrice ? `Итоговая цена: ${formatPrice(result.finalPrice)}` : 'Результат ещё не финальный'}</small>
+                  {result.paymentDeadline && <small>Оплатить до: {formatDate(result.paymentDeadline)}</small>}
+                  <small>{result.paid ? 'Оплата получена' : 'Оплата ожидается'}</small>
+                </div>
+              )}
+
+              {!user && (
+                <div className="auction-state">
+                  Смотреть лот можно без регистрации. Для ставки войдите в аккаунт.
+                </div>
+              )}
+
+              {user && isSeller && (
+                <div className="auction-state">Продавец не может ставить на свой лот.</div>
+              )}
+
+              {user && lot.status !== 'ACTIVE' && (
+                <div className="auction-state">Ставки доступны только для активных лотов.</div>
+              )}
+
+              {canBid && (
+                <form onSubmit={handleBidSubmit}>
+                  <label className="field">
+                    <span>Сумма ставки</span>
+                    <input
+                      type="number"
+                      min={minimumBid}
+                      step="0.01"
+                      value={bidAmount}
+                      onChange={(event) => setBidAmount(event.target.value)}
+                      disabled={actionLoading}
+                    />
+                    <small className="hint-text">Минимум: {formatPrice(minimumBid)}</small>
+                  </label>
+
+                  <button className="submit-button" type="submit" disabled={actionLoading}>
+                    {actionLoading ? 'Отправляем...' : 'Сделать ставку'}
                   </button>
-                )}
-                {lot.status !== 'FINISHED' && lot.status !== 'CANCELLED' && (
-                  <button
-                    className="nav-button"
-                    type="button"
-                    disabled={actionLoading}
-                    onClick={() => runLotAction(`/api/auction/lots/${lot.id}/cancel`, { method: 'POST' }, 'Lot cancelled')}
-                  >
-                    Cancel lot
-                  </button>
-                )}
-              </div>
+                </form>
+              )}
+
+              {!user && (
+                <button className="submit-button" type="button" onClick={() => onNavigate('/login')}>
+                  Войти для ставки
+                </button>
+              )}
+
+              {actionError && <div className="banner banner-error">{actionError}</div>}
+              {successMessage && <div className="banner banner-success">{successMessage}</div>}
             </div>
-          )}
-        </aside>
+
+            {canManageLot && (
+              <div className="auth-card sticky-card manage-card">
+                <p className="eyebrow">Управление</p>
+                <h3 className="side-title">Статус лота</h3>
+                <div className="card-actions card-actions-column">
+                  {lot.status === 'DRAFT' && (
+                    <button
+                      className="nav-button nav-button-dark"
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => runLotAction(`/api/auction/lots/${lot.id}/activate`, { method: 'POST' }, 'Лот активирован')}
+                    >
+                      Активировать
+                    </button>
+                  )}
+                  {lot.status !== 'FINISHED' && lot.status !== 'CANCELLED' && (
+                    <button
+                      className="nav-button"
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => runLotAction(`/api/auction/lots/${lot.id}/cancel`, { method: 'POST' }, 'Лот отменён')}
+                    >
+                      Отменить
+                    </button>
+                  )}
+                  {isAdmin && lot.status === 'ACTIVE' && (
+                    <button
+                      className="nav-button"
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => runLotAction(`/api/auction/admin/lots/${lot.id}/finish`, { method: 'POST' }, 'Лот завершён')}
+                    >
+                      Завершить как админ
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
       </section>
     </main>
   );

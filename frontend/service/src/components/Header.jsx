@@ -4,37 +4,37 @@ function Header({ user, onNavigate, onLogout }) {
   return (
     <header className="site-header">
       <button className="brand-mark" type="button" onClick={() => onNavigate('/')}>
-        Online Auction
+        Онлайн-аукцион
       </button>
 
       {user ? (
         <div className="header-actions">
           <button className="nav-button" type="button" onClick={() => onNavigate('/lots/create')}>
-            Add lot
+            Создать лот
           </button>
           {user.role === 'ADMIN' && (
             <button className="nav-button" type="button" onClick={() => onNavigate('/admin')}>
-              Admin
+              Админ-панель
             </button>
           )}
           <button className="nav-button" type="button" onClick={() => onNavigate('/account')}>
-            Account
+            Профиль
           </button>
           <div className="user-chip">
-            <span className="user-chip__label">Signed in</span>
+            <span className="user-chip__label">Вы вошли</span>
             <strong>{user.email}</strong>
           </div>
           <button className="nav-button nav-button-dark" type="button" onClick={onLogout}>
-            Logout
+            Выйти
           </button>
         </div>
       ) : (
         <div className="header-actions">
           <button className="nav-button" type="button" onClick={() => onNavigate('/login')}>
-            Login
+            Войти
           </button>
           <button className="nav-button nav-button-dark" type="button" onClick={() => onNavigate('/register')}>
-            Register
+            Регистрация
           </button>
         </div>
       )}

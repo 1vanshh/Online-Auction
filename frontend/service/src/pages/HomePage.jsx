@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { formatDate, formatPrice } from '../api.js';
+import { formatDate, formatPrice, formatStatus, winnerDisplayName } from '../api.js';
 
 const lotStatuses = [
-  { value: '', label: 'All statuses' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'FINISHED', label: 'Finished' },
-  { value: 'CANCELLED', label: 'Cancelled' }
+  { value: '', label: 'Все статусы' },
+  { value: 'DRAFT', label: 'Черновик' },
+  { value: 'ACTIVE', label: 'Активен' },
+  { value: 'FINISHED', label: 'Завершён' },
+  { value: 'CANCELLED', label: 'Отменён' }
 ];
 
 const sortOptions = [
-  { value: 'fresh', label: 'Newest first' },
-  { value: 'priceAsc', label: 'Price: low to high' },
-  { value: 'priceDesc', label: 'Price: high to low' },
-  { value: 'categoryAsc', label: 'Category: A to Z' }
+  { value: 'fresh', label: 'Сначала новые' },
+  { value: 'priceAsc', label: 'Цена: по возрастанию' },
+  { value: 'priceDesc', label: 'Цена: по убыванию' },
+  { value: 'categoryAsc', label: 'Категория: А-Я' }
 ];
 
 const getLotPrice = (lot) => Number(lot.currentPrice ?? lot.startPrice ?? 0);
@@ -46,18 +46,18 @@ function HomePage({ user, onNavigate }) {
         ]);
 
         if (!categoriesRes.ok) {
-          throw new Error(categoriesData?.message || 'Failed to load categories');
+          throw new Error(categoriesData?.message || 'Не удалось загрузить категории');
         }
 
         if (!lotsRes.ok) {
-          throw new Error(lotsData?.message || 'Failed to load lots');
+          throw new Error(lotsData?.message || 'Не удалось загрузить лоты');
         }
 
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         setLots(Array.isArray(lotsData) ? lotsData : []);
       } catch (requestError) {
         if (requestError.name !== 'AbortError') {
-          setError(requestError.message || 'Failed to load auction data');
+          setError(requestError.message || 'Не удалось загрузить данные аукциона');
         }
       } finally {
         setLoading(false);
@@ -88,8 +88,8 @@ function HomePage({ user, onNavigate }) {
       }
 
       if (sortOrder === 'categoryAsc') {
-        return String(left.categoryName || '').localeCompare(String(right.categoryName || '')) ||
-          String(left.title || '').localeCompare(String(right.title || ''));
+        return String(left.categoryName || '').localeCompare(String(right.categoryName || ''), 'ru') ||
+          String(left.title || '').localeCompare(String(right.title || ''), 'ru');
       }
 
       return new Date(right.createdAt || right.startTime || 0) - new Date(left.createdAt || left.startTime || 0);
@@ -101,17 +101,17 @@ function HomePage({ user, onNavigate }) {
       <section className="auction-section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Auction feed</p>
-            <h2>Live catalog from auction-service.</h2>
+            <p className="eyebrow">Каталог</p>
+            <h2>Актуальные лоты</h2>
           </div>
           <p className="section-copy">
-            Browse lots without an account. Sign in only when you want to create a lot or place a bid.
+            Смотреть лоты можно без регистрации. Войдите в аккаунт только когда захотите создать лот или сделать ставку.
           </p>
         </div>
 
         <div className="auction-toolbar">
           <label className="filter-control">
-            <span>Status</span>
+            <span>Статус</span>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               {lotStatuses.map((status) => (
                 <option key={status.value || 'all'} value={status.value}>
@@ -122,9 +122,9 @@ function HomePage({ user, onNavigate }) {
           </label>
 
           <label className="filter-control">
-            <span>Category</span>
+            <span>Категория</span>
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-              <option value="">All categories</option>
+              <option value="">Все категории</option>
               {categories.map((category) => (
                 <option key={category.id} value={String(category.id)}>
                   {category.name}
@@ -134,7 +134,7 @@ function HomePage({ user, onNavigate }) {
           </label>
 
           <label className="filter-control">
-            <span>Sort</span>
+            <span>Сортировка</span>
             <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -145,7 +145,7 @@ function HomePage({ user, onNavigate }) {
           </label>
         </div>
 
-        {loading && <div className="auction-state">Loading lots and categories...</div>}
+        {loading && <div className="auction-state">Загружаем лоты и категории...</div>}
         {error && <div className="banner banner-error">{error}</div>}
 
         {!loading && !error && (
@@ -161,59 +161,75 @@ function HomePage({ user, onNavigate }) {
                   }
                 >
                   <strong>{category.name}</strong>
-                  <span>{category.description || 'No description yet'}</span>
+                  <span>{category.description || 'Без описания'}</span>
                 </button>
               ))}
             </div>
 
             {visibleLots.length > 0 ? (
               <div className="lot-grid">
-                {visibleLots.map((lot) => (
-                  <article className="lot-card" key={lot.id}>
-                    <div className="lot-card__top">
-                      <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>
-                        {lot.status}
-                      </span>
-                      <span className="lot-category">{lot.categoryName || 'Uncategorized'}</span>
-                    </div>
+                {visibleLots.map((lot) => {
+                  const winnerName = winnerDisplayName(lot);
 
-                    <h3>{lot.title}</h3>
-                    <p className="lot-description">{lot.description || 'Description will be added later.'}</p>
-
-                    <dl className="lot-meta">
-                      <div>
-                        <dt>Current price</dt>
-                        <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
-                      </div>
-                      <div>
-                        <dt>Start price</dt>
-                        <dd>{formatPrice(lot.startPrice)}</dd>
-                      </div>
-                      <div>
-                        <dt>Bid step</dt>
-                        <dd>{formatPrice(lot.bidStep)}</dd>
-                      </div>
-                      <div>
-                        <dt>Ends at</dt>
-                        <dd>{formatDate(lot.endTime)}</dd>
-                      </div>
-                    </dl>
-
-                    <div className="card-actions">
-                      <button className="nav-button nav-button-dark" type="button" onClick={() => onNavigate(`/lots/${lot.id}`)}>
-                        Open lot
-                      </button>
-                      {!user && lot.status === 'ACTIVE' && (
-                        <button className="nav-button" type="button" onClick={() => onNavigate('/login')}>
-                          Login to bid
-                        </button>
+                  return (
+                    <article className={`lot-card${lot.mainImageUrl ? ' lot-card-with-image' : ''}`} key={lot.id}>
+                      {lot.mainImageUrl && (
+                        <div className="lot-card__image" style={{ backgroundImage: `url(${lot.mainImageUrl})` }} />
                       )}
-                    </div>
-                  </article>
-                ))}
+                      <div className="lot-card__content">
+                        <div className="lot-card__top">
+                          <span className={`status-badge status-${String(lot.status || '').toLowerCase()}`}>
+                            {formatStatus(lot.status)}
+                          </span>
+                          <span className="lot-category">{lot.categoryName || 'Без категории'}</span>
+                        </div>
+
+                        <h3>{lot.title}</h3>
+                        <p className="lot-description">{lot.description || 'Описание пока не добавлено.'}</p>
+
+                        {lot.status === 'FINISHED' && (
+                          <div className="winner-strip">
+                            <span>Победитель</span>
+                            <strong>{winnerName || 'Не определён'}</strong>
+                          </div>
+                        )}
+
+                        <dl className="lot-meta">
+                          <div>
+                            <dt>Текущая цена</dt>
+                            <dd>{formatPrice(lot.currentPrice ?? lot.startPrice)}</dd>
+                          </div>
+                          <div>
+                            <dt>Начальная цена</dt>
+                            <dd>{formatPrice(lot.startPrice)}</dd>
+                          </div>
+                          <div>
+                            <dt>Шаг ставки</dt>
+                            <dd>{formatPrice(lot.bidStep)}</dd>
+                          </div>
+                          <div>
+                            <dt>Завершение</dt>
+                            <dd>{formatDate(lot.endTime)}</dd>
+                          </div>
+                        </dl>
+
+                        <div className="card-actions">
+                          <button className="nav-button nav-button-dark" type="button" onClick={() => onNavigate(`/lots/${lot.id}`)}>
+                            Открыть лот
+                          </button>
+                          {!user && lot.status === 'ACTIVE' && (
+                            <button className="nav-button" type="button" onClick={() => onNavigate('/login')}>
+                              Войти для ставки
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
-              <div className="auction-state">No lots match the current filters.</div>
+              <div className="auction-state">По выбранным фильтрам лоты не найдены.</div>
             )}
           </>
         )}

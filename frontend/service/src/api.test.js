@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authedRequest, minimumBidForLot, requestJson, toLocalDateTimePayload } from './api.js';
+import { authedRequest, minimumBidForLot, requestJson, toLocalDateTimePayload, winnerDisplayName } from './api.js';
 
 test('minimumBidForLot adds current price and bid step', () => {
   assert.equal(minimumBidForLot({ currentPrice: '150.25', startPrice: '100', bidStep: '9.75' }), 160);
@@ -60,4 +60,10 @@ test('requestJson marks html responses as non-json instead of pretending they ar
   assert.equal(result.res.status, 200);
   assert.equal(result.isJson, false);
   assert.equal(result.data, null);
+});
+
+
+test('winnerDisplayName prefers resolved winner names over numeric ids', () => {
+  assert.equal(winnerDisplayName({ winnerId: 5, winnerName: 'Иван Петров' }), 'Иван Петров');
+  assert.equal(winnerDisplayName({ winnerId: 5 }, { winnerId: 5 }), 'Пользователь #5');
 });
