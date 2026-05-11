@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,6 +59,19 @@ class UserServiceTest {
         user.setBanned(false);
 
         response = UserResponse.builder().id(1L).email("ivan@example.com").firstName("Ivan").build();
+    }
+
+
+    @Test
+    void shouldListAllUsersForAdminPanel() {
+        when(userRepository.findAll()).thenReturn(List.of(user));
+        when(userMapper.toUserResponse(user)).thenReturn(response);
+
+        List<UserResponse> result = userService.getAllUsers();
+
+        assertEquals(1, result.size());
+        assertSame(response, result.getFirst());
+        verify(userBanService).syncBanStatus(user);
     }
 
     @Test

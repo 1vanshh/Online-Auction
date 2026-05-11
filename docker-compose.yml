@@ -82,6 +82,9 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
       LOGGING_LEVEL_ROOT: INFO
+      AUCTION_UPLOAD_DIR: /app/uploads/lots
+    volumes:
+      - auction_uploads:/app/uploads
     networks:
       - auction-network
 
@@ -94,6 +97,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       SERVER_PORT: 8083
       SPRING_APPLICATION_NAME: bidding-service
@@ -141,3 +146,4 @@ services:
 
 volumes:
   postgres_data:
+  auction_uploads:

@@ -110,6 +110,26 @@ class LotServiceTest {
         verify(history).save(any(LotStatusHistory.class));
     }
 
+
+    @Test
+    void shouldSaveMainImageWhenCreatingLot() {
+        CreateLotRequest request = new CreateLotRequest("Camera", "Lens", 1L, BigDecimal.valueOf(100), BigDecimal.TEN, LocalDateTime.now().plusDays(2), "https://cdn.example.com/camera.jpg");
+        when(current.getCurrentUser()).thenReturn(user);
+        when(cats.findById(1L)).thenReturn(Optional.of(category));
+        when(statuses.findByCode(LotStatusCode.DRAFT)).thenReturn(Optional.of(draft));
+        when(lots.save(any(Lot.class))).thenAnswer(invocation -> {
+            Lot saved = invocation.getArgument(0);
+            saved.setId(5L);
+            return saved;
+        });
+        when(mapper.toLotResponse(any(Lot.class))).thenReturn(response);
+
+        service.create(request);
+
+        verify(jdbc).update("delete from auction.lot_images where lot_id = ?", 5L);
+        verify(jdbc).update("insert into auction.lot_images (lot_id, image_url, is_main) values (?, ?, true)", 5L, "https://cdn.example.com/camera.jpg");
+    }
+
     @Test
     void shouldRejectCreateWithPastEndTime() {
         CreateLotRequest request = new CreateLotRequest("Lot", null, 1L, BigDecimal.ONE, BigDecimal.ONE, LocalDateTime.now().minusMinutes(1));

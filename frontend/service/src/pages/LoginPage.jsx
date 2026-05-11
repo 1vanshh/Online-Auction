@@ -25,7 +25,6 @@ function LoginPage({ onNavigate, onSuccess }) {
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState('');
-  const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
@@ -37,10 +36,7 @@ function LoginPage({ onNavigate, onSuccess }) {
     }));
 
     setFieldErrors((current) => {
-      if (!current[name]) {
-        return current;
-      }
-
+      if (!current[name]) return current;
       const next = { ...current };
       delete next[name];
       return next;
@@ -57,40 +53,33 @@ function LoginPage({ onNavigate, onSuccess }) {
       password: form.password
     };
 
-    const errors = validateForm(payload);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+    const validationErrors = validateForm(payload);
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
       return;
     }
 
     setLoading(true);
     setFieldErrors({});
     setServerError('');
-    setResponse(null);
 
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        if (data?.fieldErrors) {
-          setFieldErrors(data.fieldErrors);
-        }
-
-        throw new Error(data?.message || 'Не удалось выполнить вход');
+        if (data?.fieldErrors) setFieldErrors(data.fieldErrors);
+        throw new Error(data?.message || 'Не удалось войти');
       }
 
-      setResponse(data);
       onSuccess(data);
     } catch (error) {
-      setServerError(error.message || 'Не удалось выполнить вход');
+      setServerError(error.message || 'Не удалось войти');
     } finally {
       setLoading(false);
     }
@@ -100,11 +89,9 @@ function LoginPage({ onNavigate, onSuccess }) {
     <main className="page">
       <section className="auth-layout">
         <div className="auth-copy">
-          <p className="eyebrow">Login</p>
+          <p className="eyebrow">Вход</p>
           <h1>Войдите в аккаунт.</h1>
-          <p className="lede">
-            Используется backend-контракт LoginRequest: только email и password.
-          </p>
+          <p className="lede">После входа вы сможете делать ставки, создавать лоты и управлять своим профилем.</p>
         </div>
 
         <form className="auth-card" onSubmit={handleSubmit}>
@@ -122,11 +109,11 @@ function LoginPage({ onNavigate, onSuccess }) {
           </label>
 
           <label className="field">
-            <span>Password</span>
+            <span>Пароль</span>
             <input
               name="password"
               type="password"
-              placeholder="Your password"
+              placeholder="Ваш пароль"
               value={form.password}
               onChange={handleChange}
               disabled={loading}
@@ -136,21 +123,14 @@ function LoginPage({ onNavigate, onSuccess }) {
 
           {serverError && <div className="banner banner-error">{serverError}</div>}
 
-          {response && (
-            <div className="banner banner-success">
-              <strong>Вход выполнен.</strong>
-              <span>{response.user?.email || 'Сессия создана'}</span>
-            </div>
-          )}
-
           <button className="submit-button" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Login'}
+            {loading ? 'Входим...' : 'Войти'}
           </button>
 
           <p className="auth-footnote">
-            Do not have account?{' '}
+            Нет аккаунта?{' '}
             <button className="inline-link" type="button" onClick={() => onNavigate('/register')}>
-              Register
+              Зарегистрироваться
             </button>
           </p>
         </form>

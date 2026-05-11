@@ -5,18 +5,24 @@ import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import CreateLotPage from './pages/CreateLotPage.jsx';
+import LotDetailsPage from './pages/LotDetailsPage.jsx';
+import AdminPage from './pages/AdminPage.jsx';
 
 const AUTH_STORAGE_KEY = 'auction-auth';
 
-const getRouteFromHash = () => {
-  const route = window.location.hash.replace('#', '');
+const normalizeRoute = (route) => {
+  if (route === '/login' || route === '/register' || route === '/account' || route === '/lots/create' || route === '/admin') {
+    return route;
+  }
 
-  if (route === '/login' || route === '/register' || route === '/account' || route === '/lots/create') {
+  if (/^\/lots\/\d+$/.test(route)) {
     return route;
   }
 
   return '/';
 };
+
+const getRouteFromHash = () => normalizeRoute(window.location.hash.replace('#', '') || '/');
 
 const readStoredAuth = () => {
   try {
@@ -109,6 +115,32 @@ function App() {
   if (route === '/lots/create') {
     page = (
       <CreateLotPage
+        token={authData?.accessToken}
+        refreshToken={authData?.refreshToken}
+        user={authData?.user}
+        onNavigate={navigate}
+        onAuthRefresh={handleAuthRefresh}
+      />
+    );
+  }
+
+  if (/^\/lots\/\d+$/.test(route)) {
+    const lotId = route.split('/').at(-1);
+    page = (
+      <LotDetailsPage
+        lotId={lotId}
+        token={authData?.accessToken}
+        refreshToken={authData?.refreshToken}
+        user={authData?.user}
+        onNavigate={navigate}
+        onAuthRefresh={handleAuthRefresh}
+      />
+    );
+  }
+
+  if (route === '/admin') {
+    page = (
+      <AdminPage
         token={authData?.accessToken}
         refreshToken={authData?.refreshToken}
         user={authData?.user}

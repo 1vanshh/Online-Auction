@@ -27,6 +27,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.csrf(c -> c.disable()).sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a -> a.requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll().requestMatchers(HttpMethod.GET, "/categories/**", "/lots/**").permitAll().requestMatchers("/admin/**", "/categories/admin/**").hasRole("ADMIN").anyRequest().authenticated()).addFilterBefore(jwtTokenFilter(), UsernamePasswordAuthenticationFilter.class).build();
+        return http.csrf(c -> c.disable()).sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a -> a.requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll().requestMatchers(HttpMethod.GET, "/categories/**", "/lots/**", "/uploads/**").permitAll().requestMatchers("/admin/**", "/categories/admin/**").hasRole("ADMIN").anyRequest().authenticated()).addFilterBefore(jwtTokenFilter(), UsernamePasswordAuthenticationFilter.class).build();
     }
 }

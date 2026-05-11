@@ -50,3 +50,6 @@ docker-data/
 # Coverage / test
 # =====================
 coverage/
+# Uploaded lot photos
+uploads/
+backend/auction-service/uploads/

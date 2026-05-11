@@ -12,8 +12,8 @@ import java.util.Optional;
 @Service
 public class UserBanService {
 
-    public static final String DEFAULT_ADMIN_BAN_REASON = "Blocked by administrator";
-    public static final int DEFAULT_ADMIN_BAN_DAYS = 30;
+    public static final String DEFAULT_ADMIN_BAN_REASON = "Заблокирован администратором";
+    public static final int DEFAULT_ADMIN_BAN_DAYS = 7;
 
     private final UserBanRepository userBanRepository;
 

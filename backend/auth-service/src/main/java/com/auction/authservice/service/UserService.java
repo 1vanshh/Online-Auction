@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 public class UserService {
@@ -30,6 +32,15 @@ public class UserService {
         this.userMapper = userMapper;
         this.userBanService = userBanService;
         this.auditService = auditService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .sorted(Comparator.comparing(User::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .peek(userBanService::syncBanStatus)
+                .map(userMapper::toUserResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
