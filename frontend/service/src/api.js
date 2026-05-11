@@ -2,8 +2,20 @@ export const getErrorMessage = (data, fallback) => data?.message || fallback;
 
 export async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!contentType.toLowerCase().includes('application/json')) {
+    const text = await response.text().catch(() => '');
+    const message = text && !text.trim().startsWith('<') ? text : null;
+    return {
+      res: response,
+      data: message ? { message } : null,
+      isJson: false
+    };
+  }
+
   const data = await response.json().catch(() => null);
-  return { res: response, data };
+  return { res: response, data, isJson: true };
 }
 
 export async function refreshAuthSession(refreshToken) {

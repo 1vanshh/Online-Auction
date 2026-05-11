@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { authedRequest, formatDate, formatPrice, minimumBidForLot, requestJson } from '../api.js';
 
 async function loadLotBundle(lotId, signal) {
@@ -12,14 +12,22 @@ async function loadLotBundle(lotId, signal) {
     throw new Error(lotResult.data?.message || 'Failed to load lot');
   }
 
+  if (!lotResult.isJson || !lotResult.data || typeof lotResult.data !== 'object') {
+    throw new Error('Frontend could not load lot JSON. Open the app through http://localhost/ or configure the Vite API proxy.');
+  }
+
   if (!bidsResult.res.ok) {
     throw new Error(bidsResult.data?.message || 'Failed to load bids');
   }
 
+  if (!bidsResult.isJson || !Array.isArray(bidsResult.data)) {
+    throw new Error('Frontend could not load bids JSON. Open the app through http://localhost/ or configure the Vite API proxy.');
+  }
+
   return {
     lot: lotResult.data,
-    bids: Array.isArray(bidsResult.data) ? bidsResult.data : [],
-    result: resultResult.res.ok ? resultResult.data : null
+    bids: bidsResult.data,
+    result: resultResult.res.ok && resultResult.isJson ? resultResult.data : null
   };
 }
 
@@ -33,23 +41,33 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const loadVersion = useRef(0);
 
   const load = async (signal) => {
+    const version = loadVersion.current + 1;
+    loadVersion.current = version;
     setLoading(true);
     setError('');
 
     try {
       const bundle = await loadLotBundle(lotId, signal);
+
+      if (signal?.aborted || version !== loadVersion.current) {
+        return;
+      }
+
       setLot(bundle.lot);
       setBids(bundle.bids);
       setResult(bundle.result);
       setBidAmount(String(minimumBidForLot(bundle.lot)));
     } catch (requestError) {
-      if (requestError.name !== 'AbortError') {
+      if (!signal?.aborted && version === loadVersion.current) {
         setError(requestError.message || 'Failed to load lot');
       }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && version === loadVersion.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -100,6 +118,11 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
   const handleBidSubmit = async (event) => {
     event.preventDefault();
 
+    if (!lot) {
+      setActionError('Lot is still loading. Refresh the page and try again.');
+      return;
+    }
+
     const amount = Number(bidAmount);
     if (!Number.isFinite(amount) || amount < minimumBid) {
       setActionError(`Bid must be at least ${formatPrice(minimumBid)}`);
@@ -130,6 +153,22 @@ function LotDetailsPage({ lotId, user, token, refreshToken, onNavigate, onAuthRe
       <main className="page">
         <section className="auction-section">
           <div className="banner banner-error">{error}</div>
+          <button className="nav-button" type="button" onClick={() => onNavigate('/')}>
+            Back to catalog
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  if (!lot) {
+    return (
+      <main className="page">
+        <section className="auction-section">
+          <div className="auction-state">Loading lot details...</div>
+          <button className="nav-button" type="button" onClick={() => load()}>
+            Reload lot
+          </button>
           <button className="nav-button" type="button" onClick={() => onNavigate('/')}>
             Back to catalog
           </button>
