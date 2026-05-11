@@ -12,6 +12,11 @@ function Header({ user, onNavigate, onLogout }) {
           <button className="nav-button" type="button" onClick={() => onNavigate('/lots/create')}>
             Add lot
           </button>
+          {user.role === 'ADMIN' && (
+            <button className="nav-button" type="button" onClick={() => onNavigate('/admin')}>
+              Admin
+            </button>
+          )}
           <button className="nav-button" type="button" onClick={() => onNavigate('/account')}>
             Account
           </button>

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { formatDate, formatPrice } from '../api.js';
 
 const lotStatuses = [
   { value: '', label: 'All statuses' },
@@ -8,34 +9,21 @@ const lotStatuses = [
   { value: 'CANCELLED', label: 'Cancelled' }
 ];
 
-const formatPrice = (value) => {
-  if (value === null || value === undefined) {
-    return 'Not specified';
-  }
+const sortOptions = [
+  { value: 'fresh', label: 'Newest first' },
+  { value: 'priceAsc', label: 'Price: low to high' },
+  { value: 'priceDesc', label: 'Price: high to low' },
+  { value: 'categoryAsc', label: 'Category: A to Z' }
+];
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2
-  }).format(Number(value));
-};
-
-const formatDate = (value) => {
-  if (!value) {
-    return 'Not scheduled';
-  }
-
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(new Date(value));
-};
+const getLotPrice = (lot) => Number(lot.currentPrice ?? lot.startPrice ?? 0);
 
 function HomePage({ user, onNavigate }) {
   const [categories, setCategories] = useState([]);
   const [lots, setLots] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [sortOrder, setSortOrder] = useState('fresh');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -83,11 +71,30 @@ function HomePage({ user, onNavigate }) {
     };
   }, []);
 
-  const visibleLots = lots.filter((lot) => {
-    const matchesStatus = !statusFilter || lot.status === statusFilter;
-    const matchesCategory = !categoryFilter || String(lot.categoryId) === categoryFilter;
-    return matchesStatus && matchesCategory;
-  });
+  const visibleLots = useMemo(() => {
+    const filtered = lots.filter((lot) => {
+      const matchesStatus = !statusFilter || lot.status === statusFilter;
+      const matchesCategory = !categoryFilter || String(lot.categoryId) === categoryFilter;
+      return matchesStatus && matchesCategory;
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (sortOrder === 'priceAsc') {
+        return getLotPrice(left) - getLotPrice(right);
+      }
+
+      if (sortOrder === 'priceDesc') {
+        return getLotPrice(right) - getLotPrice(left);
+      }
+
+      if (sortOrder === 'categoryAsc') {
+        return String(left.categoryName || '').localeCompare(String(right.categoryName || '')) ||
+          String(left.title || '').localeCompare(String(right.title || ''));
+      }
+
+      return new Date(right.createdAt || right.startTime || 0) - new Date(left.createdAt || left.startTime || 0);
+    });
+  }, [categoryFilter, lots, sortOrder, statusFilter]);
 
   return (
     <main className="page">
@@ -97,6 +104,9 @@ function HomePage({ user, onNavigate }) {
             <p className="eyebrow">Auction feed</p>
             <h2>Live catalog from auction-service.</h2>
           </div>
+          <p className="section-copy">
+            Browse lots without an account. Sign in only when you want to create a lot or place a bid.
+          </p>
         </div>
 
         <div className="auction-toolbar">
@@ -118,6 +128,17 @@ function HomePage({ user, onNavigate }) {
               {categories.map((category) => (
                 <option key={category.id} value={String(category.id)}>
                   {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="filter-control">
+            <span>Sort</span>
+            <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -177,6 +198,17 @@ function HomePage({ user, onNavigate }) {
                         <dd>{formatDate(lot.endTime)}</dd>
                       </div>
                     </dl>
+
+                    <div className="card-actions">
+                      <button className="nav-button nav-button-dark" type="button" onClick={() => onNavigate(`/lots/${lot.id}`)}>
+                        Open lot
+                      </button>
+                      {!user && lot.status === 'ACTIVE' && (
+                        <button className="nav-button" type="button" onClick={() => onNavigate('/login')}>
+                          Login to bid
+                        </button>
+                      )}
+                    </div>
                   </article>
                 ))}
               </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toLocalDateTimePayload } from '../api.js';
 
 const initialForm = {
   title: '',
@@ -192,7 +193,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       categoryId: Number(form.categoryId),
       startPrice: Number(form.startPrice),
       bidStep: Number(form.bidStep),
-      endTime: new Date(form.endTime).toISOString()
+      endTime: toLocalDateTimePayload(form.endTime)
     };
 
     setLoading(true);
@@ -226,7 +227,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       }
 
       setSuccessMessage('Lot created successfully');
-      onNavigate('/');
+      onNavigate(`/lots/${data.id}`);
     } catch (error) {
       setServerError(error.message || 'Failed to create lot');
     } finally {
