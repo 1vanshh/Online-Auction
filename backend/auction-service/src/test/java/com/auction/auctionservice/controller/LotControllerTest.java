@@ -2,9 +2,11 @@ package com.auction.auctionservice.controller;
 
 import com.auction.auctionservice.dto.request.CreateLotRequest;
 import com.auction.auctionservice.dto.request.UpdateLotRequest;
+import com.auction.auctionservice.dto.response.ImageUploadResponse;
 import com.auction.auctionservice.dto.response.LotResponse;
 import com.auction.auctionservice.entity.LotStatusCode;
 import com.auction.auctionservice.exception.GlobalExceptionHandler;
+import com.auction.auctionservice.service.LotImageStorageService;
 import com.auction.auctionservice.service.LotService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -28,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +49,9 @@ class LotControllerTest {
 
     @MockBean
     private LotService lotService;
+
+    @MockBean
+    private LotImageStorageService imageStorage;
 
     private LotResponse lotResponse;
 
@@ -130,6 +136,17 @@ class LotControllerTest {
                 .andExpect(jsonPath("$.fieldErrors.startPrice").exists())
                 .andExpect(jsonPath("$.fieldErrors.bidStep").exists())
                 .andExpect(jsonPath("$.fieldErrors.endTime").exists());
+    }
+
+    @Test
+    void shouldUploadLotImage() throws Exception {
+        when(imageStorage.store(any())).thenReturn(new ImageUploadResponse("/api/auction/uploads/lots/photo.png", "photo.png", 3, "image/png"));
+
+        mockMvc.perform(multipart("/lots/images")
+                        .file("image", new byte[]{1, 2, 3}))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl").value("/api/auction/uploads/lots/photo.png"))
+                .andExpect(jsonPath("$.fileName").value("photo.png"));
     }
 
     @Test

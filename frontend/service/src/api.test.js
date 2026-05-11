@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authedRequest, minimumBidForLot, requestJson, toLocalDateTimePayload, winnerDisplayName } from './api.js';
+import { authedRequest, minimumBidForLot, requestJson, toLocalDateTimePayload, validateLotImageFile, winnerDisplayName } from './api.js';
 
 test('minimumBidForLot adds current price and bid step', () => {
   assert.equal(minimumBidForLot({ currentPrice: '150.25', startPrice: '100', bidStep: '9.75' }), 160);
@@ -66,4 +66,12 @@ test('requestJson marks html responses as non-json instead of pretending they ar
 test('winnerDisplayName prefers resolved winner names over numeric ids', () => {
   assert.equal(winnerDisplayName({ winnerId: 5, winnerName: 'Иван Петров' }), 'Иван Петров');
   assert.equal(winnerDisplayName({ winnerId: 5 }, { winnerId: 5 }), 'Пользователь #5');
+});
+
+
+test('validateLotImageFile accepts common image formats and rejects unsafe files', () => {
+  assert.equal(validateLotImageFile({ name: 'lot.JPG', type: 'image/jpeg', size: 1024 }), '');
+  assert.equal(validateLotImageFile({ name: 'lot.webp', type: 'image/webp', size: 1024 }), '');
+  assert.match(validateLotImageFile({ name: 'lot.pdf', type: 'application/pdf', size: 1024 }), /Допустимые форматы/);
+  assert.match(validateLotImageFile({ name: 'lot.png', type: 'image/png', size: 6 * 1024 * 1024 }), /не больше 5 МБ/);
 });

@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -32,6 +33,12 @@ public class GlobalExceptionHandler {
                         .fieldErrors(fieldErrors)
                         .build()
         );
+    }
+
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> maxUpload(MaxUploadSizeExceededException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Фото должно быть не больше 5 МБ", req);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

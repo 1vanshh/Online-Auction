@@ -82,6 +82,9 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
 
       LOGGING_LEVEL_ROOT: INFO
+      AUCTION_UPLOAD_DIR: /app/uploads/lots
+    volumes:
+      - auction_uploads:/app/uploads
     networks:
       - auction-network
 
@@ -143,3 +146,4 @@ services:
 
 volumes:
   postgres_data:
+  auction_uploads:

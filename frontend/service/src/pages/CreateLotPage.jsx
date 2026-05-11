@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { toLocalDateTimePayload } from '../api.js';
+import { toLocalDateTimePayload, validateLotImageFile } from '../api.js';
 
 const initialForm = {
   title: '',
@@ -7,8 +7,7 @@ const initialForm = {
   categoryId: '',
   startPrice: '',
   bidStep: '',
-  endTime: '',
-  mainImageUrl: ''
+  endTime: ''
 };
 
 const toLocalDateTimeValue = () => {
@@ -19,7 +18,7 @@ const toLocalDateTimeValue = () => {
   return localDate.toISOString().slice(0, 16);
 };
 
-const validateForm = (form) => {
+const validateForm = (form, imageFile) => {
   const errors = {};
 
   if (!form.title.trim()) {
@@ -55,8 +54,9 @@ const validateForm = (form) => {
     }
   }
 
-  if (form.mainImageUrl.trim() && form.mainImageUrl.trim().length > 500) {
-    errors.mainImageUrl = 'Ссылка на фото не должна быть длиннее 500 символов';
+  const imageError = validateLotImageFile(imageFile);
+  if (imageError) {
+    errors.imageFile = imageError;
   }
 
   return errors;
@@ -81,6 +81,22 @@ async function refreshAuthSession(refreshToken) {
   return { res, data };
 }
 
+async function uploadLotImageRequest(imageFile, accessToken) {
+  const body = new FormData();
+  body.append('image', imageFile);
+
+  const res = await fetch('/api/auction/lots/images', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    },
+    body
+  });
+
+  const data = await res.json().catch(() => null);
+  return { res, data };
+}
+
 async function createLotRequest(payload, accessToken) {
   const res = await fetch('/api/auction/lots', {
     method: 'POST',
@@ -97,12 +113,28 @@ async function createLotRequest(payload, accessToken) {
 
 function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh }) {
   const [form, setForm] = useState({ ...initialForm, endTime: toLocalDateTimeValue() });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [categories, setCategories] = useState([]);
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl('');
+      return undefined;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [imageFile]);
 
   useEffect(() => {
     if (!user) {
@@ -159,6 +191,18 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
     );
   }
 
+  const clearFieldError = (fieldName) => {
+    setFieldErrors((current) => {
+      if (!current[fieldName]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[fieldName];
+      return next;
+    });
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -167,53 +211,100 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       [name]: value
     }));
 
-    setFieldErrors((current) => {
-      if (!current[name]) {
-        return current;
-      }
-
-      const next = { ...current };
-      delete next[name];
-      return next;
-    });
-
+    clearFieldError(name);
     setServerError('');
     setSuccessMessage('');
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    const imageError = validateLotImageFile(file);
+
+    setImageFile(file);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (imageError) {
+        next.imageFile = imageError;
+      } else {
+        delete next.imageFile;
+      }
+      return next;
+    });
+    setServerError('');
+    setSuccessMessage('');
+  };
+
+  const refreshTokenIfPossible = async () => {
+    if (!refreshToken) {
+      return null;
+    }
+
+    const refreshResult = await refreshAuthSession(refreshToken);
+    if (!refreshResult.res.ok || !refreshResult.data?.accessToken) {
+      return null;
+    }
+
+    onAuthRefresh(refreshResult.data);
+    return refreshResult.data.accessToken;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const validationErrors = validateForm(form);
+    const validationErrors = validateForm(form, imageFile);
     if (Object.keys(validationErrors).length > 0) {
       setFieldErrors(validationErrors);
       return;
     }
 
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      categoryId: Number(form.categoryId),
-      startPrice: Number(form.startPrice),
-      bidStep: Number(form.bidStep),
-      endTime: toLocalDateTimePayload(form.endTime),
-      mainImageUrl: form.mainImageUrl.trim() || null
-    };
-
     setLoading(true);
     setFieldErrors({});
     setServerError('');
-    setSuccessMessage('');
+    setSuccessMessage(imageFile ? 'Загружаем фото...' : 'Создаём лот...');
 
     try {
       let activeToken = token;
+      let mainImageUrl = null;
+
+      if (imageFile) {
+        let { res, data } = await uploadLotImageRequest(imageFile, activeToken);
+
+        if ((res.status === 401 || res.status === 403) && refreshToken) {
+          const refreshedToken = await refreshTokenIfPossible();
+          if (refreshedToken) {
+            activeToken = refreshedToken;
+            ({ res, data } = await uploadLotImageRequest(imageFile, activeToken));
+          }
+        }
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            throw new Error('Сессия истекла. Войдите снова.');
+          }
+
+          throw new Error(data?.message || 'Не удалось загрузить фото');
+        }
+
+        mainImageUrl = data?.imageUrl || null;
+      }
+
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        categoryId: Number(form.categoryId),
+        startPrice: Number(form.startPrice),
+        bidStep: Number(form.bidStep),
+        endTime: toLocalDateTimePayload(form.endTime),
+        mainImageUrl
+      };
+
+      setSuccessMessage('Создаём лот...');
       let { res, data } = await createLotRequest(payload, activeToken);
 
       if ((res.status === 401 || res.status === 403) && refreshToken) {
-        const refreshResult = await refreshAuthSession(refreshToken);
-        if (refreshResult.res.ok && refreshResult.data?.accessToken) {
-          activeToken = refreshResult.data.accessToken;
-          onAuthRefresh(refreshResult.data);
+        const refreshedToken = await refreshTokenIfPossible();
+        if (refreshedToken) {
+          activeToken = refreshedToken;
           ({ res, data } = await createLotRequest(payload, activeToken));
         }
       }
@@ -234,6 +325,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
       onNavigate(`/lots/${data.id}`);
     } catch (error) {
       setServerError(error.message || 'Не удалось создать лот');
+      setSuccessMessage('');
     } finally {
       setLoading(false);
     }
@@ -246,7 +338,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
           <p className="eyebrow">Новый лот</p>
           <h1>Опубликуйте предмет для торгов.</h1>
           <p className="lede">
-            Укажите категорию, стартовую цену, шаг ставки, время завершения и ссылку на фото. Фото сохраняется в БД как основное изображение лота.
+            Укажите категорию, стартовую цену, шаг ставки, время завершения и выберите фото с компьютера. Файл сохранится в хранилище сервиса, а ссылка на него — в БД.
           </p>
         </div>
 
@@ -280,17 +372,22 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
             <label className="field field-wide">
               <span>Фото лота</span>
               <input
-                name="mainImageUrl"
-                type="url"
-                placeholder="https://example.com/photo.jpg"
-                value={form.mainImageUrl}
-                onChange={handleChange}
+                className="file-input"
+                name="imageFile"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleImageChange}
                 disabled={loading || categoriesLoading}
               />
-              {fieldErrors.mainImageUrl ? (
-                <small>{fieldErrors.mainImageUrl}</small>
+              {imagePreviewUrl && (
+                <div className="image-preview" style={{ backgroundImage: `url(${imagePreviewUrl})` }}>
+                  <span>Выбранное фото</span>
+                </div>
+              )}
+              {fieldErrors.imageFile ? (
+                <small>{fieldErrors.imageFile}</small>
               ) : (
-                <small className="hint-text">Можно оставить пустым. Ссылка сохранится в auction.lot_images.</small>
+                <small className="hint-text">JPG, PNG, WEBP или GIF, до 5 МБ. Можно оставить без фото.</small>
               )}
             </label>
 
@@ -359,7 +456,7 @@ function CreateLotPage({ token, refreshToken, user, onNavigate, onAuthRefresh })
           {successMessage && <div className="banner banner-success">{successMessage}</div>}
 
           <button className="submit-button" type="submit" disabled={loading || categoriesLoading}>
-            {loading ? 'Создаём...' : 'Создать лот'}
+            {loading ? 'Сохраняем...' : 'Создать лот'}
           </button>
         </form>
       </section>

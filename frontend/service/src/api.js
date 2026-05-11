@@ -1,5 +1,34 @@
 export const getErrorMessage = (data, fallback) => data?.message || fallback;
 
+export const MAX_LOT_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+export const ALLOWED_LOT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+export const ALLOWED_LOT_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+export const getFileExtension = (fileName = '') => {
+  const parts = String(fileName).toLowerCase().split('.');
+  return parts.length > 1 ? parts.at(-1) : '';
+};
+
+export const validateLotImageFile = (file) => {
+  if (!file) {
+    return '';
+  }
+
+  const type = String(file.type || '').toLowerCase();
+  const extension = getFileExtension(file.name);
+
+  if (!ALLOWED_LOT_IMAGE_TYPES.includes(type) || !ALLOWED_LOT_IMAGE_EXTENSIONS.includes(extension)) {
+    return 'Допустимые форматы фото: JPG, PNG, WEBP, GIF';
+  }
+
+  if (Number(file.size || 0) > MAX_LOT_IMAGE_SIZE_BYTES) {
+    return 'Фото должно быть не больше 5 МБ';
+  }
+
+  return '';
+};
+
 export async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type') || '';
